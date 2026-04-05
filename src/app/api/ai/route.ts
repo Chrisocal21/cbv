@@ -28,16 +28,20 @@ RESPONSE RULES:
 - Never bullet-point everything. Use natural prose with occasional bold for recipe names.`
 
 export async function POST(req: Request) {
-  const { messages } = await req.json()
+  const { messages, dietaryPreferences } = await req.json()
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('Invalid request', { status: 400 })
   }
 
+  const prefNote = Array.isArray(dietaryPreferences) && dietaryPreferences.length > 0
+    ? `\n\nUSER DIETARY PREFERENCES: ${dietaryPreferences.join(', ')}. Always respect these when suggesting or generating recipes. Mention them proactively if relevant.`
+    : ''
+
   const stream = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     stream: true,
-    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+    messages: [{ role: 'system', content: SYSTEM_PROMPT + prefNote }, ...messages],
     max_tokens: 1500,
     temperature: 0.7,
   })

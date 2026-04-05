@@ -7,6 +7,7 @@ type FilterState = {
   collection: Collection | 'all'
   difficulty: string
   dietary: string
+  mood: string
   search: string
 }
 
@@ -16,15 +17,19 @@ const DIETARY = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free']
 export function ExploreFilters({
   recipes,
   collectionMeta,
+  initialFilters,
 }: {
   recipes: Recipe[]
   collectionMeta: Record<Collection, { description: string; gradient: string }>
+  initialFilters?: Partial<FilterState>
 }) {
   const [filters, setFilters] = useState<FilterState>({
     collection: 'all',
     difficulty: 'all',
     dietary: 'all',
+    mood: 'all',
     search: '',
+    ...initialFilters,
   })
 
   const filtered = useMemo(() => {
@@ -32,13 +37,15 @@ export function ExploreFilters({
       if (filters.collection !== 'all' && r.collection !== filters.collection) return false
       if (filters.difficulty !== 'all' && r.difficulty !== filters.difficulty) return false
       if (filters.dietary !== 'all' && !r.dietaryTags.includes(filters.dietary as Recipe['dietaryTags'][number])) return false
+      if (filters.mood !== 'all' && !r.moodTags.some((t) => t.toLowerCase() === filters.mood.toLowerCase())) return false
       if (filters.search) {
         const q = filters.search.toLowerCase()
         if (
           !r.title.toLowerCase().includes(q) &&
           !r.description.toLowerCase().includes(q) &&
           !r.cuisine.toLowerCase().includes(q) &&
-          !r.moodTags.some((t) => t.includes(q))
+          !r.moodTags.some((t) => t.toLowerCase().includes(q)) &&
+          !r.dietaryTags.some((t) => t.toLowerCase().includes(q))
         ) return false
       }
       return true
@@ -47,6 +54,12 @@ export function ExploreFilters({
 
   const set = (key: keyof FilterState, value: string) =>
     setFilters((f) => ({ ...f, [key]: value }))
+
+  const allMoodTags = useMemo(() => {
+    const seen = new Set<string>()
+    for (const r of recipes) for (const t of r.moodTags) seen.add(t)
+    return Array.from(seen).sort()
+  }, [recipes])
 
   const collections = Object.keys(collectionMeta) as Collection[]
 
@@ -109,6 +122,23 @@ export function ExploreFilters({
             ))}
           </div>
         </div>
+
+        {/* Mood */}
+        {allMoodTags.length > 0 && (
+          <div>
+            <p className="text-xs tracking-widest uppercase text-ink-ghost mb-2">Mood</p>
+            <div className="flex flex-wrap gap-2">
+              <FilterPill active={filters.mood === 'all'} onClick={() => set('mood', 'all')}>
+                Any
+              </FilterPill>
+              {allMoodTags.map((m) => (
+                <FilterPill key={m} active={filters.mood === m} onClick={() => set('mood', m)}>
+                  {m}
+                </FilterPill>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results */}
@@ -120,7 +150,7 @@ export function ExploreFilters({
           <div className="text-center py-20 text-ink-ghost">
             <p className="text-lg font-display">No recipes match those filters.</p>
             <button
-              onClick={() => setFilters({ collection: 'all', difficulty: 'all', dietary: 'all', search: '' })}
+              onClick={() => setFilters({ collection: 'all', difficulty: 'all', dietary: 'all', mood: 'all', search: '' })}
               className="mt-4 text-ember text-sm hover:underline"
             >
               Clear all filters

@@ -29,7 +29,7 @@ export default async function RecipePage({
       <Navbar />
 
       {/* Hero */}
-      <div className={`w-full aspect-[16/9] md:aspect-[21/9] bg-gradient-to-br ${recipe.gradient} relative`}>
+      <div data-print-hide className={`w-full aspect-[16/9] md:aspect-[21/9] bg-gradient-to-br ${recipe.gradient} relative`}>
         {recipe.aiGenerated && (
           <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
             AI Generated
@@ -54,17 +54,18 @@ export default async function RecipePage({
           {/* Tags */}
           <div className="flex flex-wrap gap-2 mt-5">
             {recipe.dietaryTags.map((tag) => (
-              <span
+              <a
                 key={tag}
-                className="text-xs font-medium bg-panel border border-line text-ink-dim px-3 py-1 rounded-full"
+                href={`/explore?dietary=${encodeURIComponent(tag)}`}
+                className="text-xs font-medium bg-panel border border-line text-ink-dim hover:text-ember hover:border-ember px-3 py-1 rounded-full transition-colors"
               >
                 {tag}
-              </span>
+              </a>
             ))}
             {recipe.moodTags.map((tag) => (
               <a
                 key={tag}
-                href={`/explore?mood=${tag}`}
+                href={`/explore?mood=${encodeURIComponent(tag)}`}
                 className="text-xs font-medium bg-panel border border-line text-ink-ghost hover:text-ember hover:border-ember px-3 py-1 rounded-full transition-colors"
               >
                 {tag}
@@ -89,7 +90,9 @@ export default async function RecipePage({
         </div>
 
         {/* Save / Share */}
-        <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} isOwnerDraft={isOwnerDraft} />
+        <div data-print-hide>
+          <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} isOwnerDraft={isOwnerDraft} />
+        </div>
 
         {/* Body */}
         <div className="py-10 grid md:grid-cols-[1fr_2fr] gap-12 border-b border-line">

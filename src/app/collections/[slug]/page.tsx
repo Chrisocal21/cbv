@@ -1,18 +1,8 @@
 import { notFound } from 'next/navigation'
-import { COLLECTION_META } from '@/lib/data'
-import { getRecipesByCollection } from '@/lib/queries'
-import type { Collection } from '@/lib/data'
+import { getCollectionBySlug, getRecipesByCollection } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 
 export const dynamic = 'force-dynamic'
-
-const SLUG_TO_COLLECTION: Record<string, Collection> = {
-  'culinary-journeys': 'Culinary Journeys',
-  'seasonal-sensations': 'Seasonal Sensations',
-  'gourmet-guerillas': 'Gourmet Guerillas',
-  'quick-and-creative': 'Quick & Creative',
-  'baking-alchemy': 'Baking Alchemy',
-}
 
 export default async function CollectionPage({
   params,
@@ -20,28 +10,27 @@ export default async function CollectionPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const collection = SLUG_TO_COLLECTION[slug]
+  const collection = await getCollectionBySlug(slug)
   if (!collection) notFound()
 
-  const meta = COLLECTION_META[collection]
-  const recipes = await getRecipesByCollection(collection)
+  const recipes = await getRecipesByCollection(collection.name)
 
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
 
       {/* Collection hero */}
-      <div className={`w-full py-20 md:py-28 bg-gradient-to-br ${meta.gradient} relative`}>
+      <div className={`w-full py-20 md:py-28 bg-gradient-to-br ${collection.gradient} relative`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="relative mx-auto max-w-7xl px-6">
           <p className="text-xs font-semibold tracking-[0.2em] uppercase text-white/70 mb-4">
             Collection
           </p>
           <h1 className="font-display text-5xl md:text-6xl font-bold text-white mb-4">
-            {collection}
+            {collection.name}
           </h1>
           <p className="text-white/80 text-lg max-w-xl leading-relaxed">
-            {meta.description}
+            {collection.description}
           </p>
         </div>
       </div>

@@ -5,8 +5,21 @@ import { ExploreFilters } from '@/components/explore-filters'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ExplorePage() {
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; collection?: string; dietary?: string; mood?: string; difficulty?: string }>
+}) {
   const recipes = await getAllRecipes()
+  const params = await searchParams
+
+  const initialFilters = {
+    search: params.search ?? '',
+    collection: (params.collection ?? 'all') as 'all',
+    dietary: params.dietary ?? 'all',
+    mood: params.mood ?? 'all',
+    difficulty: params.difficulty ?? 'all',
+  }
 
   return (
     <div className="min-h-screen bg-page">
@@ -25,7 +38,7 @@ export default async function ExplorePage() {
           </p>
         </div>
 
-        <ExploreFilters recipes={recipes} collectionMeta={COLLECTION_META} />
+        <ExploreFilters recipes={recipes} collectionMeta={COLLECTION_META} initialFilters={initialFilters} />
       </div>
 
       <footer className="border-t border-line bg-panel">

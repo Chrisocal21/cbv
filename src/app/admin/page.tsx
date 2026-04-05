@@ -1,11 +1,14 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
+import { users, recipes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getAllCollections } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { AdminDashboard } from '@/components/admin-dashboard'
 import { AdminGenerator } from '@/components/admin-generator'
+import { AdminPublishedRecipes } from '@/components/admin-published-recipes'
+import { AdminCollections } from '@/components/admin-collections'
 
 export default async function AdminPage() {
   const { userId } = await auth()
@@ -13,6 +16,18 @@ export default async function AdminPage() {
 
   const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
   if (!userRows[0] || userRows[0].role !== 'admin') redirect('/')
+
+  const published = await db.select({
+    id: recipes.id,
+    title: recipes.title,
+    slug: recipes.slug,
+    cuisine: recipes.cuisine,
+    collection: recipes.collection,
+    isFeatured: recipes.isFeatured,
+    createdAt: recipes.createdAt,
+  }).from(recipes).where(eq(recipes.status, 'published'))
+
+  const allCollections = await getAllCollections()
 
   return (
     <div className="min-h-screen bg-page">
@@ -39,6 +54,20 @@ export default async function AdminPage() {
         </div>
 
         <AdminDashboard />
+
+        <div className="mt-16 mb-6">
+          <h2 className="font-display text-xl font-bold text-ink mb-1">Published recipes</h2>
+          <p className="text-sm text-ink-ghost">Manage featured status and Today&apos;s Pick.</p>
+        </div>
+
+        <AdminPublishedRecipes initialRecipes={published} />
+
+        <div className="mt-16 mb-6">
+          <h2 className="font-display text-xl font-bold text-ink mb-1">Collections</h2>
+          <p className="text-sm text-ink-ghost">Manage collection names, descriptions, and gradients. Add new ones here.</p>
+        </div>
+
+        <AdminCollections initialCollections={allCollections} />
       </div>
 
       <footer className="border-t border-line bg-panel mt-20">

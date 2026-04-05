@@ -1,9 +1,10 @@
 import { db } from '@/lib/db'
-import { recipes, users, submissions } from '@/lib/db/schema'
-import { eq, inArray, and, or } from 'drizzle-orm'
+import { recipes, users, submissions, collections } from '@/lib/db/schema'
+import { eq, inArray, and, or, desc } from 'drizzle-orm'
 import type { InferSelectModel } from 'drizzle-orm'
 
 export type RecipeRow = InferSelectModel<typeof recipes>
+export type CollectionRow = InferSelectModel<typeof collections>
 
 export async function getAllRecipes(): Promise<RecipeRow[]> {
   return db.select().from(recipes).where(eq(recipes.status, 'published'))
@@ -18,11 +19,35 @@ export async function getRecipeBySlug(slug: string): Promise<RecipeRow | undefin
   return rows[0]
 }
 
+export async function getAllCollections(): Promise<CollectionRow[]> {
+  return db.select().from(collections).orderBy(collections.sortOrder)
+}
+
+/** Returns collections with a spotlight recipe (most recently published) for each. */
+export async function getCollectionsWithSpotlight(): Promise<
+  Array<CollectionRow & { spotlight: RecipeRow | null }>
+> {
+  const allCollections = await getAllCollections()
+  const published = await getAllRecipes()
+
+  return allCollections.map((col) => {
+    const inCollection = published
+      .filter((r) => r.collection === col.name)
+      .sort((a, b) => (b.publishedAt ?? b.createdAt).getTime() - (a.publishedAt ?? a.createdAt).getTime())
+    return { ...col, spotlight: inCollection[0] ?? null }
+  })
+}
+
+export async function getCollectionBySlug(slug: string): Promise<CollectionRow | undefined> {
+  const rows = await db.select().from(collections).where(eq(collections.slug, slug)).limit(1)
+  return rows[0]
+}
+
 export async function getRecipesByCollection(collection: string): Promise<RecipeRow[]> {
   return db
     .select()
     .from(recipes)
-    .where(eq(recipes.collection, collection as RecipeRow['collection']))
+    .where(eq(recipes.collection, collection))
 }
 
 export async function getFeaturedRecipe(): Promise<RecipeRow | undefined> {

@@ -21,11 +21,20 @@ export function AIChat() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [actions, setActions] = useState<Record<number, ActionState>>({})
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    fetch('/api/user/settings')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.dietaryPreferences?.length) setDietaryPreferences(data.dietaryPreferences) })
+      .catch(() => {})
+  }, [isSignedIn])
 
   const send = async () => {
     const text = input.trim()
@@ -43,7 +52,7 @@ export function AIChat() {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: next, dietaryPreferences }),
       })
 
       if (!res.ok || !res.body) throw new Error('Request failed')

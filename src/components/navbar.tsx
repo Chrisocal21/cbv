@@ -1,15 +1,24 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useTheme } from './theme-provider'
+
+const NAV_LINKS = [
+  { href: '/explore', label: 'Explore' },
+  { href: '/collections', label: 'Collections' },
+  { href: '/ai', label: 'Ask AI' },
+  { href: '/submit', label: 'Submit' },
+]
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { isSignedIn } = useUser()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line backdrop-blur-sm bg-page/80">
+    <header className="sticky top-0 z-50 border-b border-line backdrop-blur-sm bg-page/80" data-print-hide>
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
 
         {/* Logo */}
@@ -20,20 +29,13 @@ export function Navbar() {
           Cookbookverse
         </Link>
 
-        {/* Nav links */}
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <Link href="/explore" className="text-sm text-ink-dim hover:text-ink transition-colors">
-            Explore
-          </Link>
-          <Link href="/collections" className="text-sm text-ink-dim hover:text-ink transition-colors">
-            Collections
-          </Link>
-          <Link href="/ai" className="text-sm text-ink-dim hover:text-ink transition-colors">
-            Ask AI
-          </Link>
-          <Link href="/submit" className="text-sm text-ink-dim hover:text-ink transition-colors">
-            Submit
-          </Link>
+          {NAV_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className="text-sm text-ink-dim hover:text-ink transition-colors">
+              {l.label}
+            </Link>
+          ))}
           {isSignedIn && (
             <Link href="/profile" className="text-sm text-ink-dim hover:text-ink transition-colors">
               My kitchen
@@ -59,17 +61,48 @@ export function Navbar() {
             </SignInButton>
           )}
           {isSignedIn && (
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: 'w-8 h-8',
-                },
-              }}
-            />
+            <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+          )}
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
+            className="md:hidden w-9 h-9 flex items-center justify-center rounded-full border border-line bg-panel text-ink-dim hover:text-ink transition-colors"
+          >
+            {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-line bg-page/95 backdrop-blur-sm px-6 py-4 space-y-1">
+          {NAV_LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setMobileOpen(false)}
+              className="block py-2.5 text-sm text-ink-dim hover:text-ink transition-colors"
+            >
+              {l.label}
+            </Link>
+          ))}
+          {isSignedIn && (
+            <Link href="/profile" onClick={() => setMobileOpen(false)}
+              className="block py-2.5 text-sm text-ink-dim hover:text-ink transition-colors">
+              My kitchen
+            </Link>
+          )}
+          {!isSignedIn && (
+            <SignInButton mode="modal">
+              <button className="mt-2 w-full text-sm font-medium bg-ember text-white px-4 py-2.5 rounded-full hover:bg-ember-deep transition-colors">
+                Sign in
+              </button>
+            </SignInButton>
           )}
         </div>
-
-      </div>
+      )}
     </header>
   )
 }
@@ -94,6 +127,25 @@ function MoonIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  )
+}
+
+function HamburgerIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   )
 }

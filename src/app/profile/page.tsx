@@ -136,7 +136,12 @@ export default async function ProfilePage({
             </div>
           )}
           <div>
-            <h1 className="font-display text-2xl font-bold text-ink">{displayName}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-2xl font-bold text-ink">{displayName}</h1>
+              <a href="/settings" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1">
+                Edit profile
+              </a>
+            </div>
             <div className="flex flex-wrap gap-4 mt-2 text-xs text-ink-ghost">
               <span>{published.length} published</span>
               <span>·</span>
@@ -270,9 +275,23 @@ export default async function ProfilePage({
                             Confidence: <span className={`font-semibold ${scoreColor}`}>{score}</span>
                           </p>
                         )}
-                        {s.adminDecision === 'reject' && s.adminNotes && (
-                          <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
-                            <span className="font-semibold">Admin note: </span>{s.adminNotes}
+                        {s.adminDecision === 'reject' && (
+                          <div className="mt-3 space-y-2">
+                            {[
+                              { label: 'Technique', notes: s.techniqueNotes, verdict: s.techniqueVerdict },
+                              { label: 'Flavour', notes: s.flavourNotes, verdict: s.flavourVerdict },
+                              { label: 'Home Cook', notes: s.homecookNotes, verdict: s.homecookVerdict },
+                            ].filter(j => j.verdict === 'flag' || j.verdict === 'reject').map(j => (
+                              <div key={j.label} className="rounded-lg bg-red-500/5 border border-red-500/15 px-3 py-2 text-xs">
+                                <span className="font-semibold text-red-400 uppercase tracking-wide">{j.label}</span>
+                                <span className="text-ink-dim ml-2">{j.notes}</span>
+                              </div>
+                            ))}
+                            {s.adminNotes && (
+                              <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-xs text-red-400">
+                                <span className="font-semibold">Admin note: </span>{s.adminNotes}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

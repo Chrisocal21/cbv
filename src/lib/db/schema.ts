@@ -1,5 +1,17 @@
 import { pgTable, text, integer, boolean, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core'
 
+// ─── Collections ─────────────────────────────────────────────────────────────
+
+export const collections = pgTable('collections', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  description: text('description').notNull().default(''),
+  gradient: text('gradient').notNull().default('from-stone-700 to-amber-700'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
 type Ingredient = { group: string; items: string[] }
@@ -9,14 +21,6 @@ type Nutrition = { calories: number; protein: string; carbs: string; fat: string
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export const difficultyEnum = pgEnum('difficulty', ['Easy', 'Intermediate', 'Advanced'])
-
-export const collectionEnum = pgEnum('collection', [
-  'Culinary Journeys',
-  'Seasonal Sensations',
-  'Gourmet Guerillas',
-  'Quick & Creative',
-  'Baking Alchemy',
-])
 
 export const recipeStatusEnum = pgEnum('recipe_status', [
   'published',
@@ -36,7 +40,7 @@ export const recipes = pgTable('recipes', {
   title: text('title').notNull(),
   subtitle: text('subtitle').notNull().default(''),
   description: text('description').notNull(),
-  collection: collectionEnum('collection').notNull(),
+  collection: text('collection').notNull(),
   cuisine: text('cuisine').notNull(),
   moodTags: jsonb('mood_tags').$type<string[]>().notNull().default([]),
   dietaryTags: jsonb('dietary_tags').$type<string[]>().notNull().default([]),

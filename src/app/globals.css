@@ -46,3 +46,36 @@ body {
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ─── Print ────────────────────────────────────────────────────── */
+@media print {
+  /* Hide all chrome */
+  header, footer, nav,
+  [data-print-hide],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset backgrounds and borders */
+  body, html {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* Keep text readable */
+  h1, h2, h3 { color: black !important; page-break-after: avoid; }
+  p, li { color: #333 !important; line-height: 1.6; }
+
+  /* Prevent awkward page breaks */
+  ol li, ul li { page-break-inside: avoid; }
+  section { page-break-inside: avoid; }
+
+  /* Recipe hero — skip the gradient image, show just the title area */
+  .recipe-hero { display: none !important; }
+
+  /* Remove box shadows, borders */
+  * { box-shadow: none !important; }
+
+  a { color: black !important; text-decoration: none !important; }
+}
