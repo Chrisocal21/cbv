@@ -26,7 +26,7 @@ export interface Recipe {
   collection: Collection
   cuisine: string
   moodTags: string[]
-  dietaryTags: DietaryTag[]
+  dietaryTags: string[]
   difficulty: Difficulty
   prepTime: string
   cookTime: string
