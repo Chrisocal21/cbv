@@ -30,6 +30,9 @@ export function Navbar() {
           <Link href="/ai" className="text-sm text-ink-dim hover:text-ink transition-colors">
             Ask AI
           </Link>
+          <Link href="/submit" className="text-sm text-ink-dim hover:text-ink transition-colors">
+            Submit
+          </Link>
         </nav>
 
         {/* Right side */}

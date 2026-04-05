@@ -1,16 +1,18 @@
-import { RECIPES, COLLECTION_META } from '@/lib/data'
+import { COLLECTION_META } from '@/lib/data'
+import { getFeaturedRecipe, getAllRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 
-const FEATURED_SLUG = 'slow-roasted-lamb-shoulder'
+export const dynamic = 'force-dynamic'
+
 const GRID_SLUGS = ['miso-glazed-salmon', 'lamb-kofta-with-tahini', 'brown-butter-financiers']
 
 function collectionSlug(name: string) {
   return name.toLowerCase().replace(/ & /g, '-and-').replace(/ /g, '-')
 }
 
-export default function HomePage() {
-  const featured = RECIPES.find((r) => r.slug === FEATURED_SLUG)!
-  const gridRecipes = GRID_SLUGS.map((s) => RECIPES.find((r) => r.slug === s)!)
+export default async function HomePage() {
+  const [featured, allRecipes] = await Promise.all([getFeaturedRecipe(), getAllRecipes()])
+  const gridRecipes = GRID_SLUGS.map((s) => allRecipes.find((r) => r.slug === s)!).filter(Boolean)
   const collections = Object.keys(COLLECTION_META) as (keyof typeof COLLECTION_META)[]
 
   return (

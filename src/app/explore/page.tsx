@@ -1,8 +1,13 @@
-import { RECIPES, COLLECTION_META } from '@/lib/data'
+import { COLLECTION_META } from '@/lib/data'
+import { getAllRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { ExploreFilters } from '@/components/explore-filters'
 
-export default function ExplorePage() {
+export const dynamic = 'force-dynamic'
+
+export default async function ExplorePage() {
+  const recipes = await getAllRecipes()
+
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
@@ -16,11 +21,11 @@ export default function ExplorePage() {
             Explore recipes
           </h1>
           <p className="text-ink-dim text-lg max-w-xl">
-            {RECIPES.length} recipes and counting. Filter by what you are looking for, or just wander.
+            {recipes.length} recipes and counting. Filter by what you are looking for, or just wander.
           </p>
         </div>
 
-        <ExploreFilters recipes={RECIPES} collectionMeta={COLLECTION_META} />
+        <ExploreFilters recipes={recipes} collectionMeta={COLLECTION_META} />
       </div>
 
       <footer className="border-t border-line bg-panel">

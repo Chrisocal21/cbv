@@ -1,12 +1,10 @@
 import { notFound } from 'next/navigation'
-import { RECIPES, getRecipeBySlug } from '@/lib/data'
+import { getAllRecipes, getRecipeBySlug } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { RecipeActions } from '@/components/recipe-actions'
 import { NutritionPanel } from '@/components/nutrition-panel'
 
-export function generateStaticParams() {
-  return RECIPES.map((r) => ({ slug: r.slug }))
-}
+export const dynamic = 'force-dynamic'
 
 export default async function RecipePage({
   params,
@@ -14,12 +12,13 @@ export default async function RecipePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const recipe = getRecipeBySlug(slug)
+  const recipe = await getRecipeBySlug(slug)
   if (!recipe) notFound()
 
-  const related = RECIPES.filter(
-    (r) => r.id !== recipe.id && (r.collection === recipe.collection || r.cuisine === recipe.cuisine)
-  ).slice(0, 3)
+  const allRecipes = await getAllRecipes()
+  const related = allRecipes
+    .filter((r) => r.id !== recipe.id && (r.collection === recipe.collection || r.cuisine === recipe.cuisine))
+    .slice(0, 3)
 
   return (
     <div className="min-h-screen bg-page">

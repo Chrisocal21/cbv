@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation'
-import { COLLECTION_META, getRecipesByCollection } from '@/lib/data'
+import { COLLECTION_META } from '@/lib/data'
+import { getRecipesByCollection } from '@/lib/queries'
 import type { Collection } from '@/lib/data'
 import { Navbar } from '@/components/navbar'
+
+export const dynamic = 'force-dynamic'
 
 const SLUG_TO_COLLECTION: Record<string, Collection> = {
   'culinary-journeys': 'Culinary Journeys',
@@ -9,10 +12,6 @@ const SLUG_TO_COLLECTION: Record<string, Collection> = {
   'gourmet-guerillas': 'Gourmet Guerillas',
   'quick-and-creative': 'Quick & Creative',
   'baking-alchemy': 'Baking Alchemy',
-}
-
-export function generateStaticParams() {
-  return Object.keys(SLUG_TO_COLLECTION).map((slug) => ({ slug }))
 }
 
 export default async function CollectionPage({
@@ -25,7 +24,7 @@ export default async function CollectionPage({
   if (!collection) notFound()
 
   const meta = COLLECTION_META[collection]
-  const recipes = getRecipesByCollection(collection)
+  const recipes = await getRecipesByCollection(collection)
 
   return (
     <div className="min-h-screen bg-page">

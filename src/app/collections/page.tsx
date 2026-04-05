@@ -1,12 +1,16 @@
-import { COLLECTION_META, RECIPES } from '@/lib/data'
+import { COLLECTION_META } from '@/lib/data'
 import type { Collection } from '@/lib/data'
+import { getAllRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
+
+export const dynamic = 'force-dynamic'
 
 function collectionSlug(name: string) {
   return name.toLowerCase().replace(/ & /g, '-and-').replace(/ /g, '-')
 }
 
-export default function CollectionsPage() {
+export default async function CollectionsPage() {
+  const allRecipes = await getAllRecipes()
   const collections = Object.entries(COLLECTION_META) as [
     Collection,
     { description: string; gradient: string },
@@ -31,7 +35,7 @@ export default function CollectionsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {collections.map(([name, meta]) => {
-            const count = RECIPES.filter((r) => r.collection === name).length
+              const count = allRecipes.filter((r) => r.collection === name).length
             return (
               <a
                 key={name}

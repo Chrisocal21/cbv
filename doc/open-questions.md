@@ -47,7 +47,7 @@
 
 - [ ] **Auth provider final decision** — Clerk vs. Auth.js (NextAuth)? Clerk is faster, Auth.js is more control. Decide before touching auth code
 - [ ] **Image strategy** — AI-generated (DALL-E / Midjourney), stock (Unsplash API), user-uploaded only, or a mix? This affects storage, cost, and visual consistency
-- [ ] **Cloudflare D1 vs. something else?** — D1 is the default preference, but at recipe-platform scale with complex filtering, is Postgres (via Supabase or Neon) worth considering?
+- [x] **Cloudflare D1 vs. something else?** — Neon (serverless Postgres) via Drizzle ORM. Connects directly from Next.js, free tier, no Worker proxy needed. D1 requires a Cloudflare Worker in the middle — unnecessary complexity.
 - [ ] **PWA?** — should v2 be installable on mobile as a PWA? Low effort with Next.js, high value for cooking use case (offline access to saved recipes)
 - [ ] **OG image generation** — Vercel OG library or custom Canvas API approach? Needs to be decided early since it affects deployment config
 
@@ -65,5 +65,6 @@
 | AI primary use cases? | All three — ingredients, mood/craving, dietary adaptation | Session 1 |
 | User-submitted recipes? | Yes, with Court of Chefs AI review (4 passes) + admin approval gate | Session 1 |
 | AI review architecture? | Court of Chefs — Technique, Flavour, Home Cook judges + Synthesis pass | Session 2 |
-| Frontend framework? | Next.js (SSR required — v1 CSR was a failure) | Session 1 |
+| Database | Neon serverless Postgres + Drizzle ORM. D1 skipped — requires Worker proxy. | Session 2 |
+| Hosting | Vercel for Next.js app, Cloudflare for domain DNS + R2 image storage | Session 2 |
 | Accent color? | Terracotta / rust — #C2603A | Pre-session |

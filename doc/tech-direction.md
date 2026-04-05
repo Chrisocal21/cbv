@@ -28,11 +28,14 @@ v2 fixes the two biggest technical failures of v1: **invisible to search engines
 - Edge-native, zero cold starts, near-zero cost at personal/small scale
 
 ### Database
-**Cloudflare D1**
+**Neon (serverless Postgres)**
 
-- SQL fits the recipe data model well — structured, relational (recipes → ingredients, recipes → tags, recipes → authors)
-- Already in your stack
-- Free tier comfortably covers this use case
+- Postgres fits the recipe data model well — structured, relational, powerful filtering
+- Neon's free tier covers this project comfortably through growth
+- Connects directly from Next.js — no proxy layer needed
+- Drizzle ORM for type-safe queries and migrations
+
+> Note: Cloudflare D1 was considered but requires a Worker proxy between Next.js and the DB — extra complexity for no user-facing benefit.
 
 ### File / Image Storage
 **Cloudflare R2**
@@ -57,11 +60,11 @@ v2 fixes the two biggest technical failures of v1: **invisible to search engines
 - Alternatively: Auth.js (NextAuth) if you want more control with less vendor dependency
 
 ### Deployment
-**Vercel** (frontend) + **Cloudflare** (Workers, D1, R2)
+**Vercel** (frontend + API routes) + **Cloudflare** (domain, R2 for images)
 
-- Standard setup, works well together
-- Vercel handles Next.js builds and edge functions
-- Cloudflare handles data and AI proxying
+- Vercel is purpose-built for Next.js — zero config, instant deploys, edge functions
+- Cloudflare manages the `cookbookverse.com` domain via DNS record pointing at Vercel
+- Cloudflare R2 for recipe image storage (already paid, S3-compatible, CDN-served)
 
 ---
 
