@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
 import { getAllRecipes, getRecipeBySlug } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { RecipeActions } from '@/components/recipe-actions'
@@ -12,8 +13,11 @@ export default async function RecipePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
+  const { userId } = await auth()
   const recipe = await getRecipeBySlug(slug)
   if (!recipe) notFound()
+
+  const isOwnerDraft = recipe.status === 'draft' && recipe.authorId === userId
 
   const allRecipes = await getAllRecipes()
   const related = allRecipes
@@ -85,7 +89,7 @@ export default async function RecipePage({
         </div>
 
         {/* Save / Share */}
-        <RecipeActions recipeTitle={recipe.title} />
+        <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} isOwnerDraft={isOwnerDraft} />
 
         {/* Body */}
         <div className="py-10 grid md:grid-cols-[1fr_2fr] gap-12 border-b border-line">

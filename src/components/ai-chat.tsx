@@ -1,16 +1,26 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
+type ActionStatus = 'idle' | 'saving' | 'submitting' | 'saved' | 'submitted' | 'error'
+type ActionState = { status: ActionStatus; slug?: string; error?: string }
+
+function looksLikeRecipe(content: string): boolean {
+  return /ingredients/i.test(content) && /(instructions|method|steps|directions)/i.test(content)
+}
+
 export function AIChat() {
+  const { isSignedIn } = useUser()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [actions, setActions] = useState<Record<number, ActionState>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,6 +85,45 @@ export function AIChat() {
     }
   }
 
+  async function saveRecipe(index: number) {
+    if (!isSignedIn) {
+      setActions((a) => ({ ...a, [index]: { status: 'error', error: 'Sign in to save recipes' } }))
+      return
+    }
+    setActions((a) => ({ ...a, [index]: { status: 'saving' } }))
+    const res = await fetch('/api/ai/save-recipe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: messages.slice(0, index + 1) }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setActions((a) => ({ ...a, [index]: { status: 'saved', slug: data.slug } }))
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setActions((a) => ({ ...a, [index]: { status: 'error', error: data.error ?? 'Save failed' } }))
+    }
+  }
+
+  async function submitRecipe(index: number) {
+    if (!isSignedIn) {
+      setActions((a) => ({ ...a, [index]: { status: 'error', error: 'Sign in to submit recipes' } }))
+      return
+    }
+    setActions((a) => ({ ...a, [index]: { status: 'submitting' } }))
+    const res = await fetch('/api/ai/submit-recipe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ messages: messages.slice(0, index + 1) }),
+    })
+    if (res.ok) {
+      setActions((a) => ({ ...a, [index]: { status: 'submitted' } }))
+    } else {
+      const data = await res.json().catch(() => ({}))
+      setActions((a) => ({ ...a, [index]: { status: 'error', error: data.error ?? 'Submission failed' } }))
+    }
+  }
+
   return (
     <div className="border border-line rounded-2xl bg-panel overflow-hidden">
       {/* Messages */}
@@ -96,7 +145,9 @@ export function AIChat() {
           </div>
         ) : (
           messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex flex-col ${
+              msg.role === 'user' ? 'items-end' : 'items-start'
+            }`}>
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
@@ -106,6 +157,14 @@ export function AIChat() {
               >
                 {msg.content}
               </div>
+              {msg.role === 'assistant' && !loading && looksLikeRecipe(msg.content) && (
+                <RecipeActions
+                  index={i}
+                  state={actions[i] ?? { status: 'idle' }}
+                  onSave={() => saveRecipe(i)}
+                  onSubmit={() => submitRecipe(i)}
+                />
+              )}
             </div>
           ))
         )}
@@ -161,6 +220,76 @@ function SendIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  )
+}
+
+function RecipeActions({
+  index,
+  state,
+  onSave,
+  onSubmit,
+}: {
+  index: number
+  state: ActionState
+  onSave: () => void
+  onSubmit: () => void
+}) {
+  const busy = state.status === 'saving' || state.status === 'submitting'
+
+  if (state.status === 'saved' && state.slug) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+        <span>✓ Saved.</span>
+        <a href={`/recipe/${state.slug}`} className="underline hover:text-green-300">View recipe →</a>
+      </div>
+    )
+  }
+
+  if (state.status === 'submitted') {
+    return (
+      <p className="mt-2 text-xs text-green-400">✓ Submitted for review. We'll let you know when it's approved.</p>
+    )
+  }
+
+  if (state.status === 'error') {
+    return <p className="mt-2 text-xs text-red-400">{state.error}</p>
+  }
+
+  return (
+    <div className="mt-2 flex gap-2" data-index={index}>
+      <button
+        onClick={onSave}
+        disabled={busy}
+        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-line bg-page text-ink-dim hover:border-ember hover:text-ember transition-colors disabled:opacity-50"
+      >
+        <BookmarkIcon />
+        {state.status === 'saving' ? 'Saving…' : 'Save recipe'}
+      </button>
+      <button
+        onClick={onSubmit}
+        disabled={busy}
+        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-line bg-page text-ink-dim hover:border-ember hover:text-ember transition-colors disabled:opacity-50"
+      >
+        <SubmitIcon />
+        {state.status === 'submitting' ? 'Submitting…' : 'Submit for review'}
+      </button>
+    </div>
+  )
+}
+
+function BookmarkIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function SubmitIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
     </svg>
   )
 }

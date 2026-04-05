@@ -120,23 +120,27 @@ export async function POST(req: NextRequest) {
   const recipeJson = JSON.stringify(recipe, null, 2)
   const userMessage = `Please review this recipe submission:\n\n${recipeJson}`
 
-  const results: Record<string, { verdict: string; notes: string; issues: string[] }> = {}
-
-  // Run the three judges sequentially
-  for (const judge of JUDGES) {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.3,
-      max_tokens: 400,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: judge.system },
-        { role: 'user', content: userMessage },
-      ],
+  // Run the three judges in parallel
+  const judgeResults = await Promise.all(
+    JUDGES.map(async (judge) => {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        max_tokens: 400,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: judge.system },
+          { role: 'user', content: userMessage },
+        ],
+      })
+      const content = completion.choices[0]?.message?.content ?? '{}'
+      return { name: judge.name, result: JSON.parse(content) }
     })
+  )
 
-    const content = completion.choices[0]?.message?.content ?? '{}'
-    results[judge.name] = JSON.parse(content)
+  const results: Record<string, { verdict: string; notes: string; issues: string[] }> = {}
+  for (const { name, result } of judgeResults) {
+    results[name] = result
   }
 
   // Synthesis pass

@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { SignInButton, UserButton, Show } from '@clerk/nextjs'
+import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useTheme } from './theme-provider'
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme()
+  const { isSignedIn } = useUser()
 
   return (
     <header className="sticky top-0 z-50 border-b border-line backdrop-blur-sm bg-page/80">
@@ -33,6 +34,11 @@ export function Navbar() {
           <Link href="/submit" className="text-sm text-ink-dim hover:text-ink transition-colors">
             Submit
           </Link>
+          {isSignedIn && (
+            <Link href="/profile" className="text-sm text-ink-dim hover:text-ink transition-colors">
+              My kitchen
+            </Link>
+          )}
         </nav>
 
         {/* Right side */}
@@ -45,14 +51,14 @@ export function Navbar() {
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
 
-          <Show when="signed-out">
+          {!isSignedIn && (
             <SignInButton mode="modal">
               <button className="hidden md:inline-flex text-sm font-medium bg-ember text-white px-4 py-2 rounded-full hover:bg-ember-deep transition-colors">
                 Sign in
               </button>
             </SignInButton>
-          </Show>
-          <Show when="signed-in">
+          )}
+          {isSignedIn && (
             <UserButton
               appearance={{
                 elements: {
@@ -60,7 +66,7 @@ export function Navbar() {
                 },
               }}
             />
-          </Show>
+          )}
         </div>
 
       </div>

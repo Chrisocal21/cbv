@@ -60,6 +60,7 @@ export function AdminDashboard() {
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [deciding, setDeciding] = useState<string | null>(null)
+  const [rerunning, setRerunning] = useState<string | null>(null)
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -72,6 +73,40 @@ export function AdminDashboard() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  async function rerunReview(submissionId: string) {
+    setRerunning(submissionId)
+    const res = await fetch('/api/admin/rerun-review', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ submissionId }),
+    })
+    if (res.ok) {
+      const { report } = await res.json()
+      setRows((prev) =>
+        prev.map((r) =>
+          r.submission.id === submissionId
+            ? {
+                ...r,
+                submission: {
+                  ...r.submission,
+                  techniqueVerdict: report.technique.verdict,
+                  techniqueNotes: report.technique.notes,
+                  flavourVerdict: report.flavour.verdict,
+                  flavourNotes: report.flavour.notes,
+                  homecookVerdict: report.homecook.verdict,
+                  homecookNotes: report.homecook.notes,
+                  confidenceScore: report.synthesis.confidenceScore,
+                  synthesisNotes: report.synthesis.synthesisNotes,
+                  recommendedAction: report.synthesis.recommendedAction,
+                },
+              }
+            : r
+        )
+      )
+    }
+    setRerunning(null)
+  }
 
   async function decide(submissionId: string, decision: 'publish' | 'reject') {
     setDeciding(submissionId)
@@ -112,6 +147,8 @@ export function AdminDashboard() {
       {rows.map(({ submission: sub, recipe }) => {
         const isExpanded = expanded === sub.id
         const isBusy = deciding === sub.id
+        const isRerunning = rerunning === sub.id
+        const isPendingReview = !sub.techniqueVerdict && !sub.flavourVerdict && !sub.homecookVerdict
 
         return (
           <div
@@ -189,7 +226,16 @@ export function AdminDashboard() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-2 flex-wrap">
+                  {isPendingReview && (
+                    <button
+                      disabled={isRerunning}
+                      onClick={() => rerunReview(sub.id)}
+                      className="border border-amber-500/40 text-amber-400 font-medium px-6 py-3 rounded-lg hover:bg-amber-500/10 transition-colors disabled:opacity-50 text-sm"
+                    >
+                      {isRerunning ? 'Running review…' : 'Re-run review'}
+                    </button>
+                  )}
                   <button
                     disabled={isBusy}
                     onClick={() => decide(sub.id, 'publish')}

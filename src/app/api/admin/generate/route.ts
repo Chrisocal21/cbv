@@ -73,10 +73,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { prompt } = await req.json()
+  const { prompt, attributeTo } = await req.json()
   if (!prompt?.trim()) {
     return NextResponse.json({ error: 'Prompt required' }, { status: 400 })
   }
+  // Admin-generated recipes always belong to the platform (authorId: null).
+  // The attributeTo toggle controls display credit only, not recipe ownership.
+  const authorId = null
 
   // Step 1: Generate recipe
   const gradientOptions = GRADIENTS.join(' | ')
@@ -127,7 +130,7 @@ export async function POST(req: NextRequest) {
     gradient: recipeData.gradient ?? GRADIENTS[0],
     status: 'pending_review',
     aiGenerated: true,
-    authorId: userId,
+    authorId: null,
     isFeatured: false,
   })
 
@@ -155,5 +158,6 @@ export async function POST(req: NextRequest) {
     recipe: { ...recipeData, id: recipeId, slug },
     submissionId,
     report,
+    attributeTo: attributeTo ?? 'cookbookverse',
   })
 }

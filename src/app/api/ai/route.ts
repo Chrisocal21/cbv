@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     model: 'gpt-4o-mini',
     stream: true,
     messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-    max_tokens: 500,
+    max_tokens: 1500,
     temperature: 0.7,
   })
 

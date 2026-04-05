@@ -1,14 +1,40 @@
 'use client'
 
 import { useState } from 'react'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
-export function RecipeActions({ recipeTitle }: { recipeTitle: string }) {
+export function RecipeActions({
+  recipeId,
+  recipeTitle,
+  isOwnerDraft = false,
+}: {
+  recipeId: string
+  recipeTitle: string
+  isOwnerDraft?: boolean
+}) {
+  const { isSignedIn } = useUser()
+  const router = useRouter()
   const [saved, setSaved] = useState(false)
+  const [saveLabel, setSaveLabel] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'done'>('idle')
 
-  const handleSave = () => {
-    // placeholder until auth is wired up
-    setSaved((s) => !s)
+  const handleSave = async () => {
+    if (!isSignedIn) {
+      setSaveLabel('Sign in to save recipes')
+      setTimeout(() => setSaveLabel(null), 2500)
+      return
+    }
+    const res = await fetch('/api/user/save-recipe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ recipeId }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setSaved(data.saved)
+    }
   }
 
   const handleShare = async () => {
@@ -22,8 +48,32 @@ export function RecipeActions({ recipeTitle }: { recipeTitle: string }) {
     }
   }
 
+  const handleSubmit = async () => {
+    setSubmitState('loading')
+    const res = await fetch('/api/user/submit-recipe', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ recipeId }),
+    })
+    if (res.ok) {
+      setSubmitState('done')
+      router.refresh()
+    } else {
+      setSubmitState('idle')
+    }
+  }
+
   return (
-    <div className="flex items-center gap-3 py-5 border-b border-line">
+    <div className="flex items-center gap-3 py-5 border-b border-line flex-wrap">
+      {isOwnerDraft && (
+        <button
+          onClick={handleSubmit}
+          disabled={submitState !== 'idle'}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors bg-ember text-white border-ember hover:bg-ember/90 disabled:opacity-60"
+        >
+          {submitState === 'loading' ? 'Submitting…' : submitState === 'done' ? 'Submitted for review ✓' : 'Submit for review'}
+        </button>
+      )}
       <button
         onClick={handleSave}
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
@@ -33,7 +83,7 @@ export function RecipeActions({ recipeTitle }: { recipeTitle: string }) {
         }`}
       >
         <BookmarkIcon filled={saved} />
-        {saved ? 'Saved' : 'Save recipe'}
+        {saveLabel ?? (saved ? 'Saved' : 'Save recipe')}
       </button>
       <button
         onClick={handleShare}
