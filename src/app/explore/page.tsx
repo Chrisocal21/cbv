@@ -1,4 +1,3 @@
-import { COLLECTION_META } from '@/lib/data'
 import { getAllRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { ExploreFilters } from '@/components/explore-filters'
@@ -38,7 +37,7 @@ export default async function ExplorePage({
           </p>
         </div>
 
-        <ExploreFilters recipes={recipes} collectionMeta={COLLECTION_META} initialFilters={initialFilters} />
+        <ExploreFilters recipes={recipes} initialFilters={initialFilters} />
       </div>
 
       <footer className="border-t border-line bg-panel">

@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { Recipe, Collection } from '@/lib/data'
+import type { RecipeRow } from '@/lib/queries'
 
 type FilterState = {
-  collection: Collection | 'all'
+  collection: string
   difficulty: string
   dietary: string
   mood: string
@@ -16,11 +16,9 @@ const DIETARY = ['vegetarian', 'vegan', 'gluten-free', 'dairy-free']
 
 export function ExploreFilters({
   recipes,
-  collectionMeta,
   initialFilters,
 }: {
-  recipes: Recipe[]
-  collectionMeta: Record<Collection, { description: string; gradient: string }>
+  recipes: RecipeRow[]
   initialFilters?: Partial<FilterState>
 }) {
   const [filters, setFilters] = useState<FilterState>({
@@ -36,7 +34,7 @@ export function ExploreFilters({
     return recipes.filter((r) => {
       if (filters.collection !== 'all' && r.collection !== filters.collection) return false
       if (filters.difficulty !== 'all' && r.difficulty !== filters.difficulty) return false
-      if (filters.dietary !== 'all' && !r.dietaryTags.includes(filters.dietary as Recipe['dietaryTags'][number])) return false
+      if (filters.dietary !== 'all' && !(r.dietaryTags as string[]).includes(filters.dietary)) return false
       if (filters.mood !== 'all' && !r.moodTags.some((t) => t.toLowerCase() === filters.mood.toLowerCase())) return false
       if (filters.search) {
         const q = filters.search.toLowerCase()
@@ -61,7 +59,11 @@ export function ExploreFilters({
     return Array.from(seen).sort()
   }, [recipes])
 
-  const collections = Object.keys(collectionMeta) as Collection[]
+  const collections = useMemo(() => {
+    const seen = new Set<string>()
+    for (const r of recipes) if (r.collection) seen.add(r.collection)
+    return Array.from(seen).sort()
+  }, [recipes])
 
   return (
     <div>
