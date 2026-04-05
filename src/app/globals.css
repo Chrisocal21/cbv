@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* Class-based dark mode — toggled via .dark on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Design tokens (light-mode defaults) ─────────────────────── */
+@theme {
+  /* Typography */
+  --font-display: var(--font-playfair);
+  --font-sans:    var(--font-dm-sans);
+
+  /* Page & surface backgrounds */
+  --color-page:         #FAF7F4;
+  --color-panel:        #F3EDE6;
+  --color-panel-raised: #FDFAF7;
+
+  /* Borders */
+  --color-line: #E5D9CF;
+
+  /* Text */
+  --color-ink:       #1C1410;
+  --color-ink-dim:   #6B5B52;
+  --color-ink-ghost: #9B8880;
+
+  /* Accent — terracotta */
+  --color-ember:      #C2603A;
+  --color-ember-deep: #A8502F;
+}
+
+/* ─── Dark mode overrides ──────────────────────────────────────── */
+.dark {
+  --color-page:         #1A1410;
+  --color-panel:        #231C18;
+  --color-panel-raised: #2E2420;
+  --color-line:         #3D3028;
+  --color-ink:          #F5EDE6;
+  --color-ink-dim:      #C4AFA7;
+  --color-ink-ghost:    #8A7570;
+  --color-ember-deep:   #D4714A;
+}
+
+/* ─── Base ─────────────────────────────────────────────────────── */
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
