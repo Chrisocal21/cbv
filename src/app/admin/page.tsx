@@ -1,8 +1,19 @@
+import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
 import { AdminDashboard } from '@/components/admin-dashboard'
 import { AdminGenerator } from '@/components/admin-generator'
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const { userId } = await auth()
+  if (!userId) redirect('/')
+
+  const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  if (!userRows[0] || userRows[0].role !== 'admin') redirect('/')
+
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
