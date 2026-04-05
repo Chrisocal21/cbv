@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { submissions, recipes, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 // ─── GET /api/admin/submissions — list all pending submissions with recipe data
 
 export async function GET(req: NextRequest) {
-  const { userId } = await getAuth(req)
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Check admin role

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { recipes, submissions } from '@/lib/db/schema'
 import { randomUUID } from 'crypto'
@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto'
 // then fires the Court of Chefs review asynchronously (does not block response).
 
 export async function POST(req: NextRequest) {
-  const { userId } = await getAuth(req)
+  const { userId } = await auth()
   if (!userId) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }

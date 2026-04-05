@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { recipes, submissions, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -65,7 +65,7 @@ Rules:
 - Make it something someone would genuinely want to cook tonight`
 
 export async function POST(req: NextRequest) {
-  const { userId } = await getAuth(req)
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)

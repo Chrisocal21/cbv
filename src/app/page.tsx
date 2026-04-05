@@ -48,6 +48,7 @@ export default async function HomePage() {
         </section>
 
         {/* Today's Pick */}
+        {featured && (
         <section className="mx-auto max-w-7xl px-6 mb-20">
           <div className="rounded-2xl overflow-hidden border border-line bg-panel flex flex-col md:flex-row">
             <div className={`md:w-1/2 aspect-video md:aspect-auto bg-gradient-to-br ${featured.gradient} relative min-h-64`}>
@@ -81,6 +82,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Collections */}
         <section className="mx-auto max-w-7xl px-6 mb-20">

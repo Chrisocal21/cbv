@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { submissions, recipes, users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 // ─── POST /api/admin/decide — publish or reject a submission
 
 export async function POST(req: NextRequest) {
-  const { userId } = await getAuth(req)
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
