@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
 
   // Generate image with DALL-E 3
-  const prompt = `A photorealistic DSLR food photograph of ${recipe.title}. ${recipe.description ? recipe.description.slice(0, 150) : ''} ${recipe.cuisine ? `${recipe.cuisine} cuisine.` : ''} Shot on a rustic wooden board or slate surface, soft natural side-lighting from a window, 85mm lens, f/2.8 shallow depth of field, slight bokeh background, professional food styling, garnished and plated beautifully, hyper-detailed textures, looks like it belongs in a high-end cookbook or Bon Appétit magazine. Photorealistic, not illustrated, not painting, not cartoon. No text overlays, no people, no hands.`
+  const prompt = `Hyperrealistic food photo of ${recipe.title}. Shot on a Canon 5D with a 50mm lens, f/1.8, natural daylight from the side. The dish is the only subject — centered on a plain matte surface, no props, no cutlery, no garnish clutter, no busy backgrounds. Close-up, intimate framing. The food looks genuinely cooked, real, imperfect — steam, texture, natural colour. Looks like a casual high-quality iPhone photo taken by someone who just made this meal. Not styled, not staged, not a stock photo. Photorealistic photograph, not digital art, not illustration, not painting, not CGI. No text, no watermarks, no people.`
 
   const imageRes = await openai.images.generate({
     model: 'dall-e-3',
