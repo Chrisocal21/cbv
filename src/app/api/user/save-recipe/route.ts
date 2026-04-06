@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { users, recipes } from '@/lib/db/schema'
+import { eq, sql } from 'drizzle-orm'
 
 // Ensure a user row exists (Clerk users aren't automatically synced to our DB)
 async function ensureUser(userId: string) {
@@ -37,6 +37,12 @@ export async function POST(req: NextRequest) {
   const updated = isSaved ? current.filter((id) => id !== recipeId) : [...current, recipeId]
 
   await db.update(users).set({ savedRecipes: updated }).where(eq(users.id, userId))
+
+  // Increment or decrement save_count on the recipe (fire-and-forget)
+  db.update(recipes)
+    .set({ saveCount: sql`${recipes.saveCount} + ${isSaved ? -1 : 1}` })
+    .where(eq(recipes.id, recipeId))
+    .catch(() => {})
 
   return NextResponse.json({ saved: !isSaved, savedRecipes: updated })
 }

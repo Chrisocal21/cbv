@@ -22,6 +22,7 @@ export function AIChat() {
   const [loading, setLoading] = useState(false)
   const [actions, setActions] = useState<Record<number, ActionState>>({})
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([])
+  const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,6 +34,10 @@ export function AIChat() {
     fetch('/api/user/settings')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.dietaryPreferences?.length) setDietaryPreferences(data.dietaryPreferences) })
+      .catch(() => {})
+    fetch('/api/user/fridge')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.fridgeIngredients?.length) setFridgeIngredients(data.fridgeIngredients) })
       .catch(() => {})
   }, [isSignedIn])
 
@@ -52,7 +57,7 @@ export function AIChat() {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, dietaryPreferences }),
+        body: JSON.stringify({ messages: next, dietaryPreferences, fridgeIngredients }),
       })
 
       if (!res.ok || !res.body) throw new Error('Request failed')
@@ -188,23 +193,32 @@ export function AIChat() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-line p-4 flex gap-3 items-end">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="I have chicken thighs, soy sauce, and ginger..."
-          rows={2}
-          className="flex-1 resize-none bg-page border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
-        />
-        <button
-          onClick={send}
-          disabled={!input.trim() || loading}
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-ember text-white flex items-center justify-center hover:bg-ember-deep disabled:opacity-40 transition-colors"
-          aria-label="Send"
-        >
-          <SendIcon />
-        </button>
+      <div className="border-t border-line p-4 space-y-2">
+        {fridgeIngredients.length > 0 && (
+          <div className="flex items-center gap-2 text-xs text-ink-ghost">
+            <span>🧊</span>
+            <span>Fridge loaded: {fridgeIngredients.slice(0, 5).join(', ')}{fridgeIngredients.length > 5 ? ` +${fridgeIngredients.length - 5} more` : ''}</span>
+            <a href="/fridge" className="text-ember hover:underline ml-auto">Edit fridge →</a>
+          </div>
+        )}
+        <div className="flex gap-3 items-end">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder={fridgeIngredients.length > 0 ? 'What can I make with what I have?' : 'I have chicken thighs, soy sauce, and ginger...'}
+            rows={2}
+            className="flex-1 resize-none bg-page border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
+          />
+          <button
+            onClick={send}
+            disabled={!input.trim() || loading}
+            className="flex-shrink-0 w-10 h-10 rounded-full bg-ember text-white flex items-center justify-center hover:bg-ember-deep disabled:opacity-40 transition-colors"
+            aria-label="Send"
+          >
+            <SendIcon />
+          </button>
+        </div>
       </div>
     </div>
   )

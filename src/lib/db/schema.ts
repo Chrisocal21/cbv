@@ -59,6 +59,10 @@ export const recipes = pgTable('recipes', {
   aiGenerated: boolean('ai_generated').notNull().default(false),
   authorId: text('author_id'), // null = platform/admin
   isFeatured: boolean('is_featured').notNull().default(false),
+  viewCount: integer('view_count').notNull().default(0),
+  saveCount: integer('save_count').notNull().default(0),
+  parentId: text('parent_id'),
+  isVariation: boolean('is_variation').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   publishedAt: timestamp('published_at'),
@@ -75,6 +79,7 @@ export const users = pgTable('users', {
   role: text('role').notNull().default('user'), // 'user' | 'admin'
   savedRecipes: jsonb('saved_recipes').$type<string[]>().notNull().default([]),
   dietaryPreferences: jsonb('dietary_preferences').$type<string[]>().notNull().default([]),
+  fridgeIngredients: jsonb('fridge_ingredients').$type<string[]>().notNull().default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -108,3 +113,28 @@ export const submissions = pgTable('submissions', {
   submittedAt: timestamp('submitted_at').notNull().defaultNow(),
   reviewedAt: timestamp('reviewed_at'),
 })
+
+// ─── User Collections (personal cookbooks) ────────────────────────────────────
+
+export const userCollections = pgTable('user_collections', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  recipeIds: jsonb('recipe_ids').$type<string[]>().notNull().default([]),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+// ─── Cooked Log ────────────────────────────────────────────────────────────────
+
+export const cookedLog = pgTable('cooked_log', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  recipeId: text('recipe_id').notNull(),
+  recipeSlug: text('recipe_slug').notNull(),
+  cookedAt: timestamp('cooked_at').notNull().defaultNow(),
+  servings: integer('servings').notNull().default(1),
+  notes: text('notes').default(''),
+})
+

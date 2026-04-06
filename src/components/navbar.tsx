@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useTheme } from './theme-provider'
 
@@ -9,6 +10,7 @@ const NAV_LINKS = [
   { href: '/explore', label: 'Explore' },
   { href: '/collections', label: 'Collections' },
   { href: '/ai', label: 'Ask AI' },
+  { href: '/fridge', label: 'My fridge' },
   { href: '/submit', label: 'Submit' },
 ]
 
@@ -16,6 +18,18 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { isSignedIn } = useUser()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQ, setSearchQ] = useState('')
+  const router = useRouter()
+
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (searchQ.trim()) {
+      router.push(`/explore?search=${encodeURIComponent(searchQ.trim())}`)
+      setSearchOpen(false)
+      setSearchQ('')
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-line backdrop-blur-sm bg-page/80" data-print-hide>
@@ -45,6 +59,31 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          {/* Search */}
+          {searchOpen ? (
+            <form onSubmit={submitSearch} className="flex items-center gap-2">
+              <input
+                autoFocus
+                type="text"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                onKeyDown={(e) => e.key === 'Escape' && (setSearchOpen(false), setSearchQ(''))}
+                placeholder="Search recipes…"
+                className="w-48 md:w-64 px-3 py-1.5 text-sm bg-panel border border-line rounded-full text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
+              />
+              <button type="button" onClick={() => (setSearchOpen(false), setSearchQ(''))} className="text-ink-ghost hover:text-ink transition-colors">
+                <CloseIcon />
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="Search"
+              className="w-9 h-9 flex items-center justify-center rounded-full border border-line bg-panel hover:bg-panel-raised text-ink-dim hover:text-ink transition-colors"
+            >
+              <SearchIcon />
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
@@ -146,6 +185,15 @@ function CloseIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   )
 }

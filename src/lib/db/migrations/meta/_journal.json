@@ -15,6 +15,48 @@
       "when": 1775418581392,
       "tag": "0001_collections_table",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775418581393,
+      "tag": "0002_view_counts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775418581394,
+      "tag": "0003_user_collections",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775418581395,
+      "tag": "0004_save_count",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775418581396,
+      "tag": "0005_fridge_ingredients",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775418581397,
+      "tag": "0006_recipe_versioning",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775418581398,
+      "tag": "0007_cooked_log",
+      "breakpoints": true
     }
   ]
 }

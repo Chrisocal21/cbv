@@ -2,6 +2,11 @@ import { redirect } from 'next/navigation'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
+import { UserCollections } from '@/components/user-collections'
+import { db } from '@/lib/db'
+import { userCollections, cookedLog } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { CookLog } from '@/components/cook-log'
 import {
   getUserRecipes,
   getUserSavedRecipes,
@@ -95,11 +100,13 @@ export default async function ProfilePage({
   const { tab } = await searchParams
   const activeTab = tab ?? 'my-recipes'
 
-  const [clerkUser, profile, myRecipes, submissions] = await Promise.all([
+  const [clerkUser, profile, myRecipes, submissions, myCollections, cookedEntries] = await Promise.all([
     currentUser(),
     getUserProfile(userId),
     getUserRecipes(userId),
     getUserSubmissions(userId),
+    db.select().from(userCollections).where(eq(userCollections.userId, userId)),
+    db.select().from(cookedLog).where(eq(cookedLog.userId, userId)).orderBy(desc(cookedLog.cookedAt)).limit(200),
   ])
 
   const savedRecipeIds = profile?.savedRecipes ?? []
@@ -118,6 +125,8 @@ export default async function ProfilePage({
     { id: 'my-recipes',   label: 'My recipes',     count: myRecipes.length },
     { id: 'saved',        label: 'Saved',           count: savedRecipes.length },
     { id: 'submissions',  label: 'Submissions',     count: submissions.length },
+    { id: 'collections',  label: 'My collections',  count: myCollections.length },
+    { id: 'cook-log',     label: 'Cook log',        count: cookedEntries.length },
   ]
 
   return (
@@ -219,8 +228,21 @@ export default async function ProfilePage({
             {rejected.length > 0 && (
               <section>
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-4">Rejected</h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {rejected.map((r) => <RecipeCard key={r.id} recipe={r} showStatus />)}
+                <div className="space-y-3">
+                  {rejected.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-4 bg-panel border border-line rounded-xl px-5 py-4">
+                      <div>
+                        <p className="font-semibold text-ink text-sm">{r.title}</p>
+                        <p className="text-xs text-ink-dim mt-0.5">{r.subtitle}</p>
+                      </div>
+                      <a
+                        href={`/recipe/${r.slug}/edit`}
+                        className="shrink-0 text-xs font-medium bg-ember/10 text-ember border border-ember/30 hover:bg-ember hover:text-white px-4 py-2 rounded-full transition-colors"
+                      >
+                        Edit &amp; resubmit
+                      </a>
+                    </div>
+                  ))}
                 </div>
               </section>
             )}
@@ -301,6 +323,18 @@ export default async function ProfilePage({
               </div>
             )}
           </div>
+        )}
+
+        {/* ── Collections ── */}
+        {activeTab === 'collections' && (
+          <UserCollections
+            initialCollections={myCollections as { id: string; name: string; description: string; recipeIds: string[]; createdAt: Date }[]}
+            savedRecipes={savedRecipes.map((r) => ({ id: r.id, title: r.title, slug: r.slug, gradient: r.gradient, cuisine: r.cuisine }))}
+          />
+        )}
+
+        {activeTab === 'cook-log' && (
+          <CookLog entries={cookedEntries} savedRecipes={savedRecipes.map((r) => ({ id: r.id, title: r.title, slug: r.slug, nutrition: r.nutrition }))} />
         )}
 
       </div>

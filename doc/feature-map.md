@@ -13,12 +13,12 @@
 ---
 
 ### Discovery & Browsing
-- [%] Homepage — editorial, curated, not a feed. Featured recipe, collections, moods, new additions
-- [%] Explore page — full browse with filters (cuisine, dietary, difficulty, time, mood/collection)
+- [x] Homepage — editorial, curated, not a feed. Featured recipe, collections, moods, new additions
+- [x] Explore page — full browse with filters (cuisine, dietary, difficulty, mood/collection)
 - [ ] Search — keyword search across titles, ingredients, tags, descriptions
-- [%] Collection pages — Culinary Journeys, Seasonal Sensations, Gourmet Guerillas, Quick & Creative, Baking Alchemy
-- [%] "Today's pick" or "Right now" surface — editorial highlight that rotates (manually curated by admin)
-- [ ] Tag/mood browsing — click a tag (e.g., "cozy", "spicy", "30 minutes") and enter a filtered world
+- [x] Collection pages — data-driven, DB-backed, auto-creates from new recipes
+- [x] "Today's pick" — admin-curated featured recipe, pinned from admin dashboard
+- [x] Tag/mood browsing — dietary and mood tags on recipe pages link to filtered explore
 
 ---
 
@@ -35,7 +35,7 @@
 - [x] Share button — native share / copy link
 - [x] AI badge — labeled clearly on generated recipes
 - [x] Submit for review — appears on user-owned draft recipes
-- [ ] Print view — clean, no UI chrome
+- [x] Print view — clean, no UI chrome
 
 ---
 
@@ -57,8 +57,8 @@
 - [x] User profile page ("My Kitchen") — My recipes / Saved / Submissions tabs
 - [x] Submission status tracking — see Court of Chefs verdict + admin decision
 - [ ] Create named collections — "Weeknight dinners", "Dinner party ideas", etc.
-- [ ] Account settings — username, display name, avatar, dietary preferences
-- [ ] Dietary preferences feed into AI suggestions automatically
+- [x] Account settings — display name, bio, dietary preferences
+- [x] Dietary preferences feed into AI suggestions automatically
 
 ---
 
@@ -71,7 +71,7 @@
 - [x] Submission status visible on user profile
 - [x] Admin approval queue — full Court of Chefs report + publish/reject decision
 - [x] Re-run review — admin can re-trigger Court of Chefs for stuck submissions
-- [ ] Reject feedback sent to submitter so they can revise and resubmit
+- [x] Reject feedback — judge notes shown to submitter on profile Submissions tab
 
 ---
 
@@ -80,7 +80,8 @@
 - [x] Admin recipe generator — generate, preview, chat-edit, re-review, then publish/reject
 - [x] Publish / reject with optional admin notes
 - [ ] Edit published recipes
-- [ ] "Feature this recipe" — pin to homepage, collections, or Today's Pick
+- [x] "Feature this recipe" — pin to homepage as Today's Pick from admin dashboard
+- [x] Collections management — create, edit name/description/gradient, auto-creates on new recipe value
 - [ ] Basic analytics — page views per recipe, most saved (simple, no third-party)
 - [ ] Bulk import from v1 content
 
@@ -92,9 +93,9 @@
 - [x] Terracotta accent (`#C2603A`) — consistent across both modes
 - [x] Warm off-white light mode, deep warm charcoal dark mode
 - [x] Recipe cards — gradient, title, tags, time, difficulty at a glance
-- [%] Responsive — works on desktop, mobile needs polish
+- [x] Responsive — mobile nav hamburger menu, layout works across breakpoints
 - [ ] No infinite scroll on browse — paginated or "load more" with intention
-- [ ] Print view for recipes
+- [x] Print view for recipes
 
 ---
 
@@ -102,15 +103,12 @@
 
 Roughly in priority order:
 
-1. **Search** — no keyword search exists yet
-2. **Reject feedback loop** — notify submitter with judge notes so they can fix and resubmit
-3. **Account settings** — display name, avatar, dietary prefs
-4. **Dietary prefs → AI** — user prefs inform AI suggestions automatically
-5. **Tag/mood browsing** — clickable tags that filter the world
-6. **Named collections** — user-curated "cookbooks"
-7. **Mobile polish** — responsive pass on all pages
-8. **Feature a recipe** — admin pins to homepage / Today's Pick
-9. **Print view** — clean recipe print stylesheet
+1. **Search** — no keyword search exists yet; full-text across title, description, ingredients, tags
+2. **Edit published recipes** — admin needs to fix typos, update steps, tweak a generated recipe post-publish
+3. **User-curated collections** — "Weeknight dinners", "Dinner party ideas" — personal cookbooks
+4. **Resubmit flow** — after rejection, user can revise and resubmit (not just read the feedback)
+5. **Basic analytics** — most saved, page views per recipe; no third-party, simple DB counters
+6. **Load more / pagination** — explore page currently loads everything; needs a ceiling
 
 ---
 

@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { users, recipes } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import { getAllCollections } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { AdminDashboard } from '@/components/admin-dashboard'
@@ -24,8 +24,11 @@ export default async function AdminPage() {
     cuisine: recipes.cuisine,
     collection: recipes.collection,
     isFeatured: recipes.isFeatured,
+    viewCount: recipes.viewCount,
+    saveCount: recipes.saveCount,
+    imageUrl: recipes.imageUrl,
     createdAt: recipes.createdAt,
-  }).from(recipes).where(eq(recipes.status, 'published'))
+  }).from(recipes).where(eq(recipes.status, 'published')).orderBy(desc(recipes.createdAt))
 
   const allCollections = await getAllCollections()
 

@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import { getAllRecipes, getRecipeBySlug } from '@/lib/queries'
+import { getAllRecipes, getRecipeBySlug, getUserProfile } from '@/lib/queries'
+import { db } from '@/lib/db'
+import { recipes as recipesTable } from '@/lib/db/schema'
+import { eq, sql } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
 import { RecipeActions } from '@/components/recipe-actions'
 import { NutritionPanel } from '@/components/nutrition-panel'
+import { VariationButton } from '@/components/variation-button'
+import { CookedItButton } from '@/components/cooked-it-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,18 +23,58 @@ export default async function RecipePage({
   if (!recipe) notFound()
 
   const isOwnerDraft = recipe.status === 'draft' && recipe.authorId === userId
+  const isOwnerRejected = recipe.status === 'rejected' && recipe.authorId === userId
+  const canEdit = isOwnerDraft || isOwnerRejected
 
-  const allRecipes = await getAllRecipes()
+  // Fire-and-forget view count increment for published recipes
+  if (recipe.status === 'published') {
+    db.update(recipesTable)
+      .set({ viewCount: sql`${recipesTable.viewCount} + 1` })
+      .where(eq(recipesTable.id, recipe.id))
+      .catch(() => {}) // non-blocking, ignore errors
+  }
+
+  const [allRecipes, profile] = await Promise.all([
+    getAllRecipes(),
+    userId ? getUserProfile(userId) : null,
+  ])
   const related = allRecipes
-    .filter((r) => r.id !== recipe.id && (r.collection === recipe.collection || r.cuisine === recipe.cuisine))
+    .filter((r) => r.id !== recipe.id && r.status === 'published' && (r.collection === recipe.collection || r.cuisine === recipe.cuisine))
     .slice(0, 3)
+
+  // "Because you saved X" — recipes that match what the user has saved before
+  const savedIds = new Set(profile?.savedRecipes ?? [])
+  const becauseYouSaved = (() => {
+    if (savedIds.size === 0) return []
+    const savedRecipes = allRecipes.filter((r) => savedIds.has(r.id))
+    const favCuisines = new Set(savedRecipes.map((r) => r.cuisine))
+    const favCollections = new Set(savedRecipes.map((r) => r.collection))
+    const favMoods = new Set(savedRecipes.flatMap((r) => r.moodTags as string[]))
+    return allRecipes
+      .filter((r) => r.id !== recipe.id && r.status === 'published' && !savedIds.has(r.id))
+      .map((r) => {
+        let score = 0
+        if (favCuisines.has(r.cuisine)) score += 3
+        if (favCollections.has(r.collection)) score += 2
+        for (const t of r.moodTags as string[]) if (favMoods.has(t)) score++
+        return { recipe: r, score }
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map((x) => x.recipe)
+  })()
 
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
 
       {/* Hero */}
-      <div data-print-hide className={`w-full aspect-[16/9] md:aspect-[21/9] bg-gradient-to-br ${recipe.gradient} relative`}>
+      <div data-print-hide className={`w-full h-48 md:h-72 relative overflow-hidden ${recipe.imageUrl ? 'bg-black' : `bg-gradient-to-br ${recipe.gradient}`}`}>
+        {recipe.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover opacity-90" />
+        )}
         {recipe.aiGenerated && (
           <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
             AI Generated
@@ -92,6 +137,22 @@ export default async function RecipePage({
         {/* Save / Share */}
         <div data-print-hide>
           <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} isOwnerDraft={isOwnerDraft} />
+          <div className="flex flex-wrap gap-2 mt-3">
+            {canEdit && (
+              <a
+                href={`/recipe/${recipe.slug}/edit`}
+                className="inline-flex items-center gap-2 text-xs text-ink-dim hover:text-ember border border-line hover:border-ember px-4 py-2 rounded-full transition-colors"
+              >
+                ✏️ Edit recipe
+              </a>
+            )}
+            {userId && recipe.status === 'published' && (
+              <VariationButton parentSlug={recipe.slug} />
+            )}
+            {userId && recipe.status === 'published' && (
+              <CookedItButton recipeId={recipe.id} recipeSlug={recipe.slug} recipeTitle={recipe.title} />
+            )}
+          </div>
         </div>
 
         {/* Body */}
@@ -164,7 +225,43 @@ export default async function RecipePage({
                   href={`/recipe/${r.slug}`}
                   className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
                 >
-                  <div className={`aspect-video bg-gradient-to-br ${r.gradient}`} />
+                  <div className={`aspect-video bg-gradient-to-br ${r.gradient} overflow-hidden`}>
+                    {r.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrl} alt={r.title} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs uppercase tracking-wide text-ink-ghost mb-1">{r.collection}</p>
+                    <h3 className="font-display font-bold text-ink group-hover:text-ember transition-colors leading-snug text-sm">
+                      {r.title}
+                    </h3>
+                    <p className="text-xs text-ink-ghost mt-1">{r.totalTime} &middot; {r.difficulty}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Because you saved — Phase 3: personalised recs */}
+        {becauseYouSaved.length > 0 && (
+          <div className="py-10 border-t border-line">
+            <h2 className="font-display text-2xl font-bold text-ink mb-1">Because of what you&rsquo;ve been saving</h2>
+            <p className="text-sm text-ink-ghost mb-6">More recipes matching your taste</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {becauseYouSaved.map((r) => (
+                <a
+                  key={r.id}
+                  href={`/recipe/${r.slug}`}
+                  className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
+                >
+                  <div className={`aspect-video bg-gradient-to-br ${r.gradient} overflow-hidden`}>
+                    {r.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrl} alt={r.title} className="w-full h-full object-cover" />
+                    )}
+                  </div>
                   <div className="p-4">
                     <p className="text-xs uppercase tracking-wide text-ink-ghost mb-1">{r.collection}</p>
                     <h3 className="font-display font-bold text-ink group-hover:text-ember transition-colors leading-snug text-sm">

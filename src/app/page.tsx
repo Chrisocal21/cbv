@@ -1,19 +1,59 @@
-import { COLLECTION_META } from '@/lib/data'
-import { getFeaturedRecipe, getAllRecipes } from '@/lib/queries'
+import { auth } from '@clerk/nextjs/server'
+import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 
 export const dynamic = 'force-dynamic'
 
-const GRID_SLUGS = ['miso-glazed-salmon', 'lamb-kofta-with-tahini', 'brown-butter-financiers']
-
-function collectionSlug(name: string) {
-  return name.toLowerCase().replace(/ & /g, '-and-').replace(/ /g, '-')
-}
-
 export default async function HomePage() {
-  const [featured, allRecipes] = await Promise.all([getFeaturedRecipe(), getAllRecipes()])
-  const gridRecipes = GRID_SLUGS.map((s) => allRecipes.find((r) => r.slug === s)!).filter(Boolean)
-  const collections = Object.keys(COLLECTION_META) as (keyof typeof COLLECTION_META)[]
+  const { userId } = await auth()
+  const [featured, allRecipes, dbCollections, profile] = await Promise.all([
+    getFeaturedRecipe(),
+    getAllRecipes(),
+    getCollectionsWithSpotlight(),
+    userId ? getUserProfile(userId) : null,
+  ])
+
+  // New additions — most recent 3 published recipes (excluding featured)
+  const newAdditions = allRecipes
+    .filter((r) => r.status === 'published' && r.id !== featured?.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3)
+
+  // Personalised picks — only compute when user has saved recipes
+  const savedIds = new Set(profile?.savedRecipes ?? [])
+  const dietaryPrefs = (profile?.dietaryPreferences as string[] | null) ?? []
+  const personalisedRecipes = (() => {
+    if (!userId || savedIds.size === 0) return []
+    const savedRecipes = allRecipes.filter((r) => savedIds.has(r.id))
+    // Build preference vectors from saved recipes
+    const favCuisines = new Map<string, number>()
+    const favCollections = new Map<string, number>()
+    const favMoods = new Map<string, number>()
+    for (const r of savedRecipes) {
+      favCuisines.set(r.cuisine, (favCuisines.get(r.cuisine) ?? 0) + 1)
+      favCollections.set(r.collection, (favCollections.get(r.collection) ?? 0) + 1)
+      for (const t of r.moodTags as string[]) favMoods.set(t, (favMoods.get(t) ?? 0) + 1)
+    }
+    // Score unsaved published recipes
+    return allRecipes
+      .filter((r) => r.status === 'published' && !savedIds.has(r.id) && r.id !== featured?.id)
+      .map((r) => {
+        let score = 0
+        score += (favCuisines.get(r.cuisine) ?? 0) * 3
+        score += (favCollections.get(r.collection) ?? 0) * 2
+        for (const t of r.moodTags as string[]) score += (favMoods.get(t) ?? 0)
+        // Dietary preference boost
+        if (dietaryPrefs.length > 0) {
+          const tags = r.dietaryTags as string[]
+          if (dietaryPrefs.some((p) => tags.includes(p))) score += 2
+        }
+        return { recipe: r, score }
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((x) => x.recipe)
+  })()
 
   return (
     <div className="min-h-screen bg-page">
@@ -88,19 +128,54 @@ export default async function HomePage() {
         <section className="mx-auto max-w-7xl px-6 mb-20">
           <h2 className="font-display text-2xl font-bold text-ink mb-6">Browse by collection</h2>
           <div className="flex gap-3 flex-wrap">
-            {collections.map((name) => (
+            {dbCollections.map((c) => (
               <a
-                key={name}
-                href={`/collections/${collectionSlug(name)}`}
+                key={c.id}
+                href={`/collections/${c.slug}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-line bg-panel hover:bg-panel-raised hover:border-ember text-sm font-medium text-ink-dim hover:text-ink transition-all"
               >
-                {name}
+                {c.name}
               </a>
             ))}
           </div>
         </section>
 
-        {/* Recipe grid */}
+        {/* Picked for you — Phase 3: personalised recs */}
+        {personalisedRecipes.length > 0 && (
+          <section className="mx-auto max-w-7xl px-6 mb-20">
+            <div className="flex items-baseline justify-between mb-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">Picked for you</h2>
+                <p className="text-sm text-ink-ghost mt-1">Based on what you&rsquo;ve been saving</p>
+              </div>
+              <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">
+                See all
+              </a>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {personalisedRecipes.map((recipe) => (
+                <a
+                  key={recipe.id}
+                  href={`/recipe/${recipe.slug}`}
+                  className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
+                >
+                  <div className={`aspect-[4/3] bg-gradient-to-br ${recipe.gradient}`} />
+                  <div className="p-4">
+                    <p className="text-xs font-semibold tracking-[0.12em] uppercase text-ink-ghost mb-1.5">
+                      {recipe.collection}
+                    </p>
+                    <h3 className="font-display text-base font-bold text-ink group-hover:text-ember transition-colors leading-snug">
+                      {recipe.title}
+                    </h3>
+                    <p className="text-xs text-ink-ghost mt-2">{recipe.totalTime} · {recipe.difficulty}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* New additions */}
         <section className="mx-auto max-w-7xl px-6 mb-24">
           <div className="flex items-baseline justify-between mb-6">
             <h2 className="font-display text-2xl font-bold text-ink">New additions</h2>
@@ -109,7 +184,7 @@ export default async function HomePage() {
             </a>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {gridRecipes.map((recipe) => (
+            {newAdditions.map((recipe) => (
               <a
                 key={recipe.id}
                 href={`/recipe/${recipe.slug}`}
