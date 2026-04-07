@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 
 const PAGE_SIZE = 20
 
@@ -43,6 +43,7 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   const [page, setPage] = useState(0)
   const [generatingImg, setGeneratingImg] = useState<string | null>(null)
   const [imgError, setImgError] = useState<string | null>(null)
+  const [imgStyle, setImgStyle] = useState<'ingredients' | 'dish'>('ingredients')
 
   const generateImage = async (id: string) => {
     setGeneratingImg(id)
@@ -50,7 +51,7 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
     const res = await fetch('/api/admin/generate-image', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ recipeId: id }),
+      body: JSON.stringify({ recipeId: id, style: imgStyle }),
     })
     if (res.ok) {
       const { imageUrl } = await res.json()
@@ -203,8 +204,8 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
         </thead>
         <tbody>
           {paginated.map((r, i) => (
-            <>
-              <tr key={r.id} className={`border-b border-line ${editingId === r.id ? '' : 'last:border-0'} ${i % 2 === 0 ? 'bg-page' : 'bg-panel'}`}>
+            <React.Fragment key={r.id}>
+              <tr className={`border-b border-line ${editingId === r.id ? '' : 'last:border-0'} ${i % 2 === 0 ? 'bg-page' : 'bg-panel'}`}>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     {/* Thumbnail */}
@@ -228,6 +229,15 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
                 <td className="px-5 py-3 text-ink-ghost text-right hidden md:table-cell">{r.saveCount.toLocaleString()}</td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <select
+                      value={imgStyle}
+                      onChange={(e) => setImgStyle(e.target.value as 'ingredients' | 'dish')}
+                      className="text-xs bg-panel border border-line rounded px-1 py-0.5 text-ink-ghost focus:outline-none focus:border-ember"
+                      title="Image style"
+                    >
+                      <option value="ingredients">Ingredients</option>
+                      <option value="dish">Finished dish</option>
+                    </select>
                     <button
                       disabled={generatingImg === r.id}
                       onClick={() => generateImage(r.id)}
@@ -299,7 +309,7 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
                   </td>
                 </tr>
               )}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>

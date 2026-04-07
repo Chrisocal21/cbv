@@ -18,15 +18,19 @@ export async function POST(req: Request) {
   const [user] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1)
   if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { recipeId } = await req.json()
+  const { recipeId, style = 'ingredients' } = await req.json()
   if (!recipeId) return NextResponse.json({ error: 'recipeId required' }, { status: 400 })
 
   const [recipe] = await db.select({ id: recipes.id, title: recipes.title, description: recipes.description, cuisine: recipes.cuisine })
     .from(recipes).where(eq(recipes.id, recipeId)).limit(1)
   if (!recipe) return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
 
-  // Generate image with DALL-E 3
-  const prompt = `Hyperrealistic food photo of ${recipe.title}. Shot on a Canon 5D with a 50mm lens, f/1.8, natural daylight from the side. The dish is the only subject — centered on a plain matte surface, no props, no cutlery, no garnish clutter, no busy backgrounds. Close-up, intimate framing. The food looks genuinely cooked, real, imperfect — steam, texture, natural colour. Looks like a casual high-quality iPhone photo taken by someone who just made this meal. Not styled, not staged, not a stock photo. Photorealistic photograph, not digital art, not illustration, not painting, not CGI. No text, no watermarks, no people.`
+  // Two prompt modes switchable from the admin panel
+  const prompt = style === 'ingredients'
+    // Flat-lay raw ingredients — more reliable, less "AI fake" look
+    ? `Overhead flat-lay food photography of the raw ingredients for ${recipe.title} (${recipe.cuisine} cuisine). Fresh, whole ingredients arranged loosely on a worn wooden chopping board or aged marble surface. Natural diffused daylight, soft shadows. Shot on a 50mm lens from directly above. Ingredients look real, slightly imperfect, not perfectly arranged. Herbs, spices, vegetables, and proteins laid out naturally as if someone just set them out to prep. Muted, warm, editorial colour grading. No text, no people, no utensils, no finished dish. Photorealistic photograph only.`
+    // Finished dish — enhanced editorial style
+    : `Editorial food photograph of ${recipe.title}, ${recipe.cuisine} cuisine. Shot on a dark moody background — slate, charcoal linen, or deep walnut wood. The finished dish is plated simply in a wide shallow bowl or on a ceramic plate. Dramatic side lighting, deep shadows, small highlight catching the texture of the food. One or two minimal garnishes only — a herb sprig, a drizzle. Intimate close-up, f/1.4 bokeh. Colour palette: deep, rich, warm tones. Michelin-level food photography aesthetic. No people, no text, no watermarks. Photorealistic photograph, not illustration.`
 
   const imageRes = await openai.images.generate({
     model: 'dall-e-3',

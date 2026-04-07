@@ -118,69 +118,42 @@ export function ExploreFilters({
         />
       </div>
 
-      {/* Filter pills */}
-      <div className="flex flex-wrap gap-x-8 gap-y-4 pb-8 border-b border-line mb-8">
-        {/* Collections */}
+      {/* Filters */}
+      <div className="pb-6 border-b border-line mb-8 space-y-4">
+        {/* Row 1: Collection */}
         <div>
           <p className="text-xs tracking-widest uppercase text-ink-ghost mb-2">Collection</p>
           <div className="flex flex-wrap gap-2">
-            <FilterPill active={filters.collection === 'all'} onClick={() => set('collection', 'all')}>
-              All
-            </FilterPill>
+            <FilterPill active={filters.collection === 'all'} onClick={() => set('collection', 'all')}>All</FilterPill>
             {collections.map((c) => (
-              <FilterPill key={c} active={filters.collection === c} onClick={() => set('collection', c)}>
-                {c}
-              </FilterPill>
+              <FilterPill key={c} active={filters.collection === c} onClick={() => set('collection', c)}>{c}</FilterPill>
             ))}
           </div>
         </div>
 
-        {/* Difficulty */}
-        <div>
-          <p className="text-xs tracking-widest uppercase text-ink-ghost mb-2">Difficulty</p>
-          <div className="flex flex-wrap gap-2">
-            <FilterPill active={filters.difficulty === 'all'} onClick={() => set('difficulty', 'all')}>
-              All
-            </FilterPill>
-            {DIFFICULTIES.map((d) => (
-              <FilterPill key={d} active={filters.difficulty === d} onClick={() => set('difficulty', d)}>
-                {d}
-              </FilterPill>
-            ))}
-          </div>
+        {/* Row 2: Difficulty + Dietary + Mood — compact selects */}
+        <div className="flex flex-wrap gap-3 items-end">
+          <FilterSelect
+            label="Difficulty"
+            value={filters.difficulty}
+            onChange={(v) => set('difficulty', v)}
+            options={[{ value: 'all', label: 'Any difficulty' }, ...DIFFICULTIES.map((d) => ({ value: d, label: d }))]}
+          />
+          <FilterSelect
+            label="Dietary"
+            value={filters.dietary}
+            onChange={(v) => set('dietary', v)}
+            options={[{ value: 'all', label: 'Any diet' }, ...DIETARY.map((d) => ({ value: d, label: d }))]}
+          />
+          {allMoodTags.length > 0 && (
+            <FilterSelect
+              label="Mood"
+              value={filters.mood}
+              onChange={(v) => set('mood', v)}
+              options={[{ value: 'all', label: 'Any mood' }, ...allMoodTags.map((m) => ({ value: m, label: m }))]}
+            />
+          )}
         </div>
-
-        {/* Dietary */}
-        <div>
-          <p className="text-xs tracking-widest uppercase text-ink-ghost mb-2">Dietary</p>
-          <div className="flex flex-wrap gap-2">
-            <FilterPill active={filters.dietary === 'all'} onClick={() => set('dietary', 'all')}>
-              Any
-            </FilterPill>
-            {DIETARY.map((d) => (
-              <FilterPill key={d} active={filters.dietary === d} onClick={() => set('dietary', d)}>
-                {d}
-              </FilterPill>
-            ))}
-          </div>
-        </div>
-
-        {/* Mood */}
-        {allMoodTags.length > 0 && (
-          <div>
-            <p className="text-xs tracking-widest uppercase text-ink-ghost mb-2">Mood</p>
-            <div className="flex flex-wrap gap-2">
-              <FilterPill active={filters.mood === 'all'} onClick={() => set('mood', 'all')}>
-                Any
-              </FilterPill>
-              {allMoodTags.map((m) => (
-                <FilterPill key={m} active={filters.mood === m} onClick={() => set('mood', m)}>
-                  {m}
-                </FilterPill>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Results */}
@@ -256,6 +229,36 @@ export function ExploreFilters({
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  const active = value !== 'all'
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-xs tracking-widest uppercase text-ink-ghost">{label}</p>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors bg-panel cursor-pointer focus:outline-none focus:border-ember ${
+          active ? 'border-ember text-ink' : 'border-line text-ink-dim'
+        }`}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
     </div>
   )
 }

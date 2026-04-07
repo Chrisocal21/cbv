@@ -91,8 +91,11 @@ export default async function HomePage() {
         {featured && (
         <section className="mx-auto max-w-7xl px-6 mb-20">
           <div className="rounded-2xl overflow-hidden border border-line bg-panel flex flex-col md:flex-row">
-            <div className={`md:w-1/2 aspect-video md:aspect-auto bg-gradient-to-br ${featured.gradient} relative min-h-64`}>
-              <span className="absolute top-4 left-4 text-xs font-semibold tracking-[0.15em] uppercase bg-ember text-white px-3 py-1.5 rounded-full">
+            <div className={`md:w-1/2 aspect-video md:aspect-auto relative min-h-64 overflow-hidden ${!featured.imageUrl ? `bg-gradient-to-br ${featured.gradient}` : ''}`}>
+              {featured.imageUrl && (
+                <img src={featured.imageUrl} alt={featured.title} className="absolute inset-0 w-full h-full object-cover" />
+              )}
+              <span className="absolute top-4 left-4 text-xs font-semibold tracking-[0.15em] uppercase bg-ember text-white px-3 py-1.5 rounded-full z-10">
                 {"Today's Pick"}
               </span>
             </div>
@@ -159,7 +162,11 @@ export default async function HomePage() {
                   href={`/recipe/${recipe.slug}`}
                   className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
                 >
-                  <div className={`aspect-[4/3] bg-gradient-to-br ${recipe.gradient}`} />
+                  <div className={`aspect-[4/3] overflow-hidden relative ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+                    {recipe.imageUrl && (
+                      <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    )}
+                  </div>
                   <div className="p-4">
                     <p className="text-xs font-semibold tracking-[0.12em] uppercase text-ink-ghost mb-1.5">
                       {recipe.collection}
@@ -190,7 +197,11 @@ export default async function HomePage() {
                 href={`/recipe/${recipe.slug}`}
                 className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
               >
-                <div className={`aspect-[4/3] bg-gradient-to-br ${recipe.gradient}`} />
+                <div className={`aspect-[4/3] overflow-hidden relative ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+                  {recipe.imageUrl && (
+                    <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  )}
+                </div>
                 <div className="p-5">
                   <p className="text-xs font-semibold tracking-[0.12em] uppercase text-ink-ghost mb-2">
                     {recipe.collection}

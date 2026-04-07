@@ -21,6 +21,25 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
   const [editDesc, setEditDesc] = useState('')
   const [editGradient, setEditGradient] = useState('')
   const [saving, setSaving] = useState(false)
+  const [generatingImg, setGeneratingImg] = useState<string | null>(null)
+  const [imgError, setImgError] = useState<string | null>(null)
+
+  async function generateImage(id: string) {
+    setGeneratingImg(id)
+    setImgError(null)
+    const res = await fetch('/api/admin/generate-collection-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collectionId: id }),
+    })
+    if (res.ok) {
+      const { imageUrl } = await res.json()
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, imageUrl } : r)))
+    } else {
+      setImgError('Image generation failed')
+    }
+    setGeneratingImg(null)
+  }
 
   // Create state
   const [showCreate, setShowCreate] = useState(false)
@@ -121,7 +140,11 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
             </div>
           ) : (
             <div className="flex items-start gap-4">
-              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${row.gradient} flex-shrink-0`} />
+              {row.imageUrl ? (
+                <img src={row.imageUrl} alt={row.name} className="w-16 h-10 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className={`w-16 h-10 rounded-lg bg-gradient-to-br ${row.gradient} flex-shrink-0`} />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-3">
                   <span className="font-display font-bold text-ink">{row.name}</span>
@@ -131,12 +154,22 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
                   {row.description || <span className="italic text-ink-ghost">No description</span>}
                 </p>
               </div>
-              <button
-                onClick={() => startEdit(row)}
-                className="text-xs text-ink-ghost hover:text-ember transition-colors flex-shrink-0"
-              >
-                Edit
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => generateImage(row.id)}
+                  disabled={generatingImg === row.id}
+                  title={row.imageUrl ? 'Regenerate cover photo' : 'Generate cover photo'}
+                  className={`text-xs px-2 py-1 transition-colors ${row.imageUrl ? 'text-green-400 hover:text-ember' : 'text-ink-ghost hover:text-ember'} disabled:opacity-40`}
+                >
+                  {generatingImg === row.id ? '⏳' : row.imageUrl ? '🖼️✓' : '🖼️'}
+                </button>
+                <button
+                  onClick={() => startEdit(row)}
+                  className="text-xs text-ink-ghost hover:text-ember transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -196,6 +229,7 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
           + Add collection
         </button>
       )}
+      {imgError && <p className="text-xs text-red-400 mt-2">{imgError}</p>}
     </div>
   )
 }

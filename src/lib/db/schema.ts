@@ -8,6 +8,7 @@ export const collections = pgTable('collections', {
   slug: text('slug').notNull().unique(),
   description: text('description').notNull().default(''),
   gradient: text('gradient').notNull().default('from-stone-700 to-amber-700'),
+  imageUrl: text('image_url'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })

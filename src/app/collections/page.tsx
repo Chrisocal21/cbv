@@ -30,15 +30,31 @@ export default async function CollectionsPage() {
               href={`/collections/${col.slug}`}
               className="group relative rounded-2xl overflow-hidden border border-line hover:border-ember transition-all"
             >
-              {/* Gradient swatch */}
-              <div className={`h-36 bg-gradient-to-br ${col.gradient} relative`}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <div className="absolute bottom-4 left-5">
-                  <h2 className="font-display text-xl font-bold text-white leading-snug">
-                    {col.name}
-                  </h2>
+              {/* Cover image or gradient fallback */}
+              {col.imageUrl ? (
+                <div className="h-48 relative overflow-hidden">
+                  <img
+                    src={col.imageUrl}
+                    alt={col.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-5">
+                    <h2 className="font-display text-xl font-bold text-white leading-snug drop-shadow-sm">
+                      {col.name}
+                    </h2>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className={`h-48 bg-gradient-to-br ${col.gradient} relative`}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-4 left-5">
+                    <h2 className="font-display text-xl font-bold text-white leading-snug">
+                      {col.name}
+                    </h2>
+                  </div>
+                </div>
+              )}
 
               {/* Body */}
               <div className="p-5 bg-panel">

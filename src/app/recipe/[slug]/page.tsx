@@ -9,8 +9,41 @@ import { RecipeActions } from '@/components/recipe-actions'
 import { NutritionPanel } from '@/components/nutrition-panel'
 import { VariationButton } from '@/components/variation-button'
 import { CookedItButton } from '@/components/cooked-it-button'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const recipe = await getRecipeBySlug(slug)
+  if (!recipe) return {}
+
+  const description = recipe.description?.slice(0, 155) ?? `${recipe.cuisine} · ${recipe.totalTime} · ${recipe.difficulty}`
+  const images = recipe.imageUrl
+    ? [{ url: recipe.imageUrl, width: 1792, height: 1024, alt: recipe.title }]
+    : []
+
+  return {
+    title: `${recipe.title} — Cookbookverse`,
+    description,
+    openGraph: {
+      title: recipe.title,
+      description,
+      type: 'article',
+      images,
+    },
+    twitter: {
+      card: recipe.imageUrl ? 'summary_large_image' : 'summary',
+      title: recipe.title,
+      description,
+      images: recipe.imageUrl ? [recipe.imageUrl] : [],
+    },
+  }
+}
 
 export default async function RecipePage({
   params,
