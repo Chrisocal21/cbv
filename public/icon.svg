@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#1C1410"/>
+  <!-- Bowl body -->
+  <path d="M12 62 Q12 87 35 87 Q58 87 58 62 Z" fill="#C2603A"/>
+  <!-- Bowl rim -->
+  <ellipse cx="35" cy="62" rx="23" ry="7.5" fill="#9B4928"/>
+  <!-- Inner bowl hollow -->
+  <ellipse cx="35" cy="63.5" rx="15.5" ry="4.5" fill="#1C1410" opacity="0.45"/>
+  <!-- Bowl gleam -->
+  <path d="M17 73 Q19 83 33 86" fill="none" stroke="#FAF7F4" stroke-width="2.5" stroke-linecap="round" opacity="0.1"/>
+  <!-- Handle main -->
+  <path d="M56 59 Q70 43 77 17" fill="none" stroke="#C2603A" stroke-width="8.5" stroke-linecap="round"/>
+  <!-- Handle shadow underside -->
+  <path d="M58.5 62 Q72.5 46 79.5 20" fill="none" stroke="#7A3318" stroke-width="3.5" stroke-linecap="round" opacity="0.55"/>
+  <!-- Handle highlight -->
+  <path d="M54 57 Q67.5 41 74.5 15" fill="none" stroke="#E88060" stroke-width="2" stroke-linecap="round" opacity="0.38"/>
+  <!-- Hang hole -->
+  <circle cx="77" cy="16" r="6" fill="#1C1410"/>
+  <circle cx="77" cy="16" r="6" fill="none" stroke="#C2603A" stroke-width="3"/>
+  <circle cx="77" cy="16" r="2" fill="none" stroke="#9B4928" stroke-width="1.2"/>
+</svg>

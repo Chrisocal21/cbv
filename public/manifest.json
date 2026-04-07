@@ -1,0 +1,17 @@
+{
+  "name": "Cookbookverse",
+  "short_name": "CBV",
+  "description": "A world of recipes worth making.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF7F4",
+  "theme_color": "#C2603A",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72">
+  <!-- Icon mark -->
+  <rect x="0" y="0" width="72" height="72" rx="16" fill="#1C1410"/>
+  <text
+    x="36"
+    y="50"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="26"
+    font-weight="700"
+    font-style="italic"
+    letter-spacing="1.5"
+    fill="#C2603A"
+  >CBV</text>
+
+  <!-- Wordmark -->
+  <text
+    x="90"
+    y="38"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="28"
+    font-weight="700"
+    fill="#1C1410"
+    letter-spacing="-0.3"
+  >Cookbook</text>
+  <text
+    x="92"
+    y="62"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="22"
+    font-weight="400"
+    font-style="italic"
+    fill="#C2603A"
+    letter-spacing="0.5"
+  >verse</text>
+</svg>
