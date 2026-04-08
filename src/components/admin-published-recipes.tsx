@@ -43,7 +43,8 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   const [page, setPage] = useState(0)
   const [generatingImg, setGeneratingImg] = useState<string | null>(null)
   const [imgError, setImgError] = useState<string | null>(null)
-  const [imgStyle, setImgStyle] = useState<'ingredients' | 'dish'>('ingredients')
+  const [imgMode, setImgMode] = useState<'real' | 'expectation'>('real')
+  const [bulkRegen, setBulkRegen] = useState<{ done: number; total: number } | null>(null)
 
   const generateImage = async (id: string) => {
     setGeneratingImg(id)
@@ -51,7 +52,7 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
     const res = await fetch('/api/admin/generate-image', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ recipeId: id, style: imgStyle }),
+      body: JSON.stringify({ recipeId: id, mode: imgMode }),
     })
     if (res.ok) {
       const { imageUrl } = await res.json()
@@ -61,6 +62,27 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
       setImgError(data.error ?? `HTTP ${res.status}`)
     }
     setGeneratingImg(null)
+  }
+
+  const bulkRegenAll = async () => {
+    const withImages = recipes.filter((r) => r.imageUrl !== null)
+    if (withImages.length === 0) return
+    setBulkRegen({ done: 0, total: withImages.length })
+    setImgError(null)
+    for (let i = 0; i < withImages.length; i++) {
+      const r = withImages[i]
+      const res = await fetch('/api/admin/generate-image', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ recipeId: r.id, mode: imgMode }),
+      })
+      if (res.ok) {
+        const { imageUrl } = await res.json()
+        setRecipes((prev) => prev.map((p) => p.id === r.id ? { ...p, imageUrl } : p))
+      }
+      setBulkRegen({ done: i + 1, total: withImages.length })
+    }
+    setBulkRegen(null)
   }
 
   const filtered = useMemo(() => {
@@ -182,6 +204,28 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
         </span>
       </div>
 
+      {/* Bulk regen controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={imgMode}
+          onChange={(e) => setImgMode(e.target.value as 'real' | 'expectation')}
+          className="text-xs bg-panel border border-line rounded px-2 py-1 text-ink-ghost focus:outline-none focus:border-ember"
+          title="Image style mode"
+        >
+          <option value="real">Real (imperfect)</option>
+          <option value="expectation">Expectation (clean)</option>
+        </select>
+        <button
+          disabled={!!bulkRegen}
+          onClick={bulkRegenAll}
+          className="text-xs px-3 py-1.5 rounded-full border border-line text-ink-ghost hover:border-ember hover:text-ember disabled:opacity-40 transition-colors"
+        >
+          {bulkRegen
+            ? `Regenerating… ${bulkRegen.done}/${bulkRegen.total}`
+            : `Regen all w/ images (${recipes.filter((r) => r.imageUrl !== null).length})`}
+        </button>
+      </div>
+
       {/* Error toast */}
       {imgError && (
         <div className="flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs px-4 py-2.5 rounded-lg">
@@ -229,15 +273,7 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
                 <td className="px-5 py-3 text-ink-ghost text-right hidden md:table-cell">{r.saveCount.toLocaleString()}</td>
                 <td className="px-5 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <select
-                      value={imgStyle}
-                      onChange={(e) => setImgStyle(e.target.value as 'ingredients' | 'dish')}
-                      className="text-xs bg-panel border border-line rounded px-1 py-0.5 text-ink-ghost focus:outline-none focus:border-ember"
-                      title="Image style"
-                    >
-                      <option value="ingredients">Ingredients</option>
-                      <option value="dish">Finished dish</option>
-                    </select>
+
                     <button
                       disabled={generatingImg === r.id}
                       onClick={() => generateImage(r.id)}

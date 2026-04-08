@@ -100,6 +100,7 @@ export function AdminGenerator() {
   const [decided, setDecided] = useState<'publish' | 'reject' | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
   const [open, setOpen] = useState(true)
+  const [suggesting, setSuggesting] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
@@ -109,6 +110,16 @@ export function AdminGenerator() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
+
+  async function suggestRandom() {
+    setSuggesting(true)
+    const res = await fetch('/api/admin/suggest-recipe', { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json()
+      setPrompt(data.prompt)
+    }
+    setSuggesting(false)
+  }
 
   function addTag(tag: string) {
     setPrompt((p) => {
@@ -245,9 +256,23 @@ export function AdminGenerator() {
           {/* Prompt + attribution */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-3">
-                What should we make?
-              </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-xs font-semibold uppercase tracking-widest text-ink-ghost">
+                  What should we make?
+                </label>
+                <button
+                  type="button"
+                  onClick={suggestRandom}
+                  disabled={suggesting || loading}
+                  className="flex items-center gap-1.5 text-xs text-ink-ghost border border-line rounded-full px-3 py-1 hover:border-ember hover:text-ember transition-colors disabled:opacity-40"
+                >
+                  {suggesting ? (
+                    <><span className="w-3 h-3 border border-ember border-t-transparent rounded-full animate-spin" /> Thinking…</>
+                  ) : (
+                    <>✦ Surprise me</>
+                  )}
+                </button>
+              </div>
               <textarea
                 rows={3}
                 value={prompt}
