@@ -52,7 +52,16 @@ export default async function CollectionPage({
                 href={`/recipe/${recipe.slug}`}
                 className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
               >
-                <div className={`aspect-[4/3] bg-gradient-to-br ${recipe.gradient}`} />
+                <div className={`aspect-[4/3] bg-gradient-to-br ${recipe.gradient} relative`}>
+                  {recipe.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={recipe.imageUrl}
+                      alt={recipe.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+                </div>
                 <div className="p-5">
                   <p className="text-xs font-semibold tracking-[0.12em] uppercase text-ink-ghost mb-2">
                     {recipe.cuisine}

@@ -101,6 +101,10 @@ export const submissions = pgTable('submissions', {
   homecookVerdict: submissionVerdictEnum('homecook_verdict'),
   homecookNotes: text('homecook_notes'),
 
+  criticVerdict: submissionVerdictEnum('critic_verdict'),
+  criticNotes: text('critic_notes'),
+  criticIssues: jsonb('critic_issues').$type<string[]>().default([]),
+
   // Synthesis pass
   confidenceScore: integer('confidence_score'), // 0–100
   synthesisNotes: text('synthesis_notes'),

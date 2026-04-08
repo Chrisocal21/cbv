@@ -34,6 +34,7 @@ type CourtReport = {
   technique: JudgeResult
   flavour: JudgeResult
   homecook: JudgeResult
+  critic: JudgeResult
   synthesis: {
     recommendedAction: RecommendedAction
     confidenceScore: number
@@ -100,7 +101,8 @@ export function AdminGenerator() {
   const [decided, setDecided] = useState<'publish' | 'reject' | null>(null)
   const [adminNotes, setAdminNotes] = useState('')
   const [open, setOpen] = useState(true)
-  const [suggesting, setSuggesting] = useState(false)
+  const [suggesting, setSuggesting] = useState<string | null>(null)
+  const [applyingCritic, setApplyingCritic] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
@@ -111,14 +113,18 @@ export function AdminGenerator() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
-  async function suggestRandom() {
-    setSuggesting(true)
-    const res = await fetch('/api/admin/suggest-recipe', { method: 'POST' })
+  async function suggest(mode: 'surprise' | 'bold' | 'yours') {
+    setSuggesting(mode)
+    const res = await fetch('/api/admin/suggest-recipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+    })
     if (res.ok) {
       const data = await res.json()
       setPrompt(data.prompt)
     }
-    setSuggesting(false)
+    setSuggesting(null)
   }
 
   function addTag(tag: string) {
@@ -192,20 +198,70 @@ export function AdminGenerator() {
     setChatLoading(false)
   }
 
+  async function applyCritic() {
+    if (!result) return
+    const critic = result.report.critic
+    if (!critic?.notes) return
+    setApplyingCritic(true)
+    setChatMessages(m => [...m, { role: 'assistant', text: `Applying ${critic.issues?.length ?? 0} critic correction${critic.issues?.length !== 1 ? 's' : ''}…` }])
+
+    const res = await fetch('/api/admin/apply-critic', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        recipe: result.recipe,
+        criticNotes: critic.notes,
+        criticIssues: critic.issues ?? [],
+        recipeId: result.recipe.id,
+      }),
+    })
+
+    if (!res.ok) {
+      setChatMessages(m => [...m, { role: 'assistant', text: 'Critic correction failed. Try again.' }])
+      setApplyingCritic(false)
+      return
+    }
+
+    const data = await res.json()
+    setResult(prev => prev ? { ...prev, recipe: { ...data.recipe, id: prev.recipe.id, slug: prev.recipe.slug } } : prev)
+    setChatMessages(m => [...m, { role: 'assistant', text: 'Corrections applied — re-running court review…' }])
+
+    // Automatically re-review the corrected recipe
+    const reviewRes = await fetch('/api/admin/rerun-review', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ submissionId: result.submissionId }),
+    })
+
+    if (reviewRes.ok) {
+      const reviewData = await reviewRes.json()
+      setResult(prev => prev ? { ...prev, report: reviewData.report } : prev)
+      setReviewStale(false)
+      const score = reviewData.report.synthesis.confidenceScore
+      const action = reviewData.report.synthesis.recommendedAction
+      setChatMessages(m => [...m, { role: 'assistant', text: `Review complete — score: ${score}, recommendation: ${action}. Review the changes above and publish when ready.` }])
+    } else {
+      setReviewStale(true)
+      setChatMessages(m => [...m, { role: 'assistant', text: 'Corrections saved but review re-run failed. Use the re-run button above.' }])
+    }
+
+    setApplyingCritic(false)
+  }
+
   async function rerunReview() {
     if (!result) return
     setChatLoading(true)
     setChatMessages(m => [...m, { role: 'assistant', text: 'Re-running court review…' }])
 
-    const res = await fetch('/api/admin/generate', {
+    const res = await fetch('/api/admin/rerun-review', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ prompt: `[RE-REVIEW ONLY] ${JSON.stringify(result.recipe)}`, attributeTo: attribution }),
+      body: JSON.stringify({ submissionId: result.submissionId }),
     })
 
     if (res.ok) {
       const data = await res.json()
-      setResult(prev => prev ? { ...prev, report: data.report, submissionId: data.submissionId } : prev)
+      setResult(prev => prev ? { ...prev, report: data.report } : prev)
       setReviewStale(false)
       setChatMessages(m => [...m, { role: 'assistant', text: `Review complete. New confidence score: ${data.report.synthesis.confidenceScore}.` }])
     } else {
@@ -260,18 +316,26 @@ export function AdminGenerator() {
                 <label className="block text-xs font-semibold uppercase tracking-widest text-ink-ghost">
                   What should we make?
                 </label>
-                <button
-                  type="button"
-                  onClick={suggestRandom}
-                  disabled={suggesting || loading}
-                  className="flex items-center gap-1.5 text-xs text-ink-ghost border border-line rounded-full px-3 py-1 hover:border-ember hover:text-ember transition-colors disabled:opacity-40"
-                >
-                  {suggesting ? (
-                    <><span className="w-3 h-3 border border-ember border-t-transparent rounded-full animate-spin" /> Thinking…</>
-                  ) : (
-                    <>✦ Surprise me</>
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  {([
+                    { mode: 'surprise', label: '✦ Surprise me', title: 'Find a gap we haven\'t filled yet' },
+                    { mode: 'bold', label: '⚡ Be Bold', title: 'Something wild from a lesser-known food culture' },
+                    { mode: 'yours', label: '◎ Your Choice', title: 'A side, snack, or pairing for something we already have' },
+                  ] as const).map(({ mode, label, title }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => suggest(mode)}
+                      disabled={!!suggesting || loading}
+                      title={title}
+                      className="flex items-center gap-1.5 text-xs text-ink-ghost border border-line rounded-full px-3 py-1 hover:border-ember hover:text-ember transition-colors disabled:opacity-40"
+                    >
+                      {suggesting === mode ? (
+                        <><span className="w-3 h-3 border border-ember border-t-transparent rounded-full animate-spin" /> Thinking…</>
+                      ) : label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <textarea
                 rows={3}
@@ -443,8 +507,10 @@ export function AdminGenerator() {
               </>)})()}
 
               {/* Court report */}
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-3">Court review</p>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Court of Chefs</p>
+
+                {/* Three standard judges */}
                 <div className="grid md:grid-cols-3 gap-3">
                   {([
                     { label: 'Technique', judge: result.report.technique },
@@ -461,7 +527,7 @@ export function AdminGenerator() {
                         <ul className="space-y-1 pt-1">
                           {judge.issues.map((issue, i) => (
                             <li key={i} className="text-xs text-amber-400 flex gap-1.5">
-                              <span className="mt-0.5">!</span>{issue}
+                              <span className="mt-0.5 flex-shrink-0">!</span>{issue}
                             </li>
                           ))}
                         </ul>
@@ -469,7 +535,71 @@ export function AdminGenerator() {
                     </div>
                   ))}
                 </div>
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 mt-3">
+
+                {/* Devil's Advocate — full width, distinct styling */}
+                {(() => {
+                  const critic = result.report.critic
+                  const hasIssues = critic?.issues?.length > 0
+                  const borderColor = critic?.verdict === 'reject'
+                    ? 'border-red-500/40'
+                    : critic?.verdict === 'flag'
+                    ? 'border-amber-500/40'
+                    : 'border-line'
+                  const bgColor = critic?.verdict === 'reject'
+                    ? 'bg-red-500/5'
+                    : critic?.verdict === 'flag'
+                    ? 'bg-amber-500/5'
+                    : 'bg-page'
+                  return (
+                    <div className={`rounded-lg border ${borderColor} ${bgColor} p-4 space-y-3`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400">QA Review</p>
+                          <span className="text-xs text-ink-ghost border border-line rounded px-1.5 py-0.5">Sanity check</span>
+                        </div>
+                        <VerdictBadge verdict={critic?.verdict ?? 'pass'} />
+                      </div>
+                      <p className="text-sm text-ink-dim leading-relaxed">{critic?.notes}</p>
+                      {hasIssues && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400/70 mb-2">Specific problems</p>
+                          <ul className="space-y-2">
+                            {critic.issues.map((issue, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 text-xs flex items-center justify-center mt-0.5 font-bold">{i + 1}</span>
+                                <span className="text-ink-dim">{issue}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {!hasIssues && critic?.verdict === 'pass' && (
+                        <p className="text-xs text-green-400/80 border border-green-500/20 rounded px-3 py-1.5">QA passed — no real-world problems found.</p>
+                      )}
+                      {(hasIssues || critic?.verdict !== 'pass') && (
+                        <div className="pt-1 border-t border-line/50 flex items-center justify-between gap-3">
+                          <p className="text-xs text-ink-ghost">
+                            {critic?.verdict === 'pass' ? 'Critic passed — nothing to fix.' : `${critic?.issues?.length ?? 0} problem${critic?.issues?.length !== 1 ? 's' : ''} flagged`}
+                          </p>
+                          <button
+                            disabled={applyingCritic || chatLoading || decided !== null}
+                            onClick={applyCritic}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {applyingCritic ? (
+                              <><span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" /> Fixing…</>
+                            ) : (
+                              '⚡ Apply critic corrections'
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Synthesis */}
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
                   <div className="flex items-center gap-3 mb-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-400">Synthesis</p>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
