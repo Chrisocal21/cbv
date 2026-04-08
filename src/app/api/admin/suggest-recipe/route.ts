@@ -15,7 +15,21 @@ export async function POST(req: Request) {
   if (!user || user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  const mode: 'surprise' | 'bold' | 'yours' = body.mode ?? 'surprise'
+  const mode: 'surprise' | 'bold' | 'yours' | 'v1archive' = body.mode ?? 'surprise'
+
+  // v1 archive — pick a random v1 dish concept and return it as a prompt without any AI call
+  if (mode === 'v1archive') {
+    const v1Dishes = [
+      'Miso-glazed salmon fillets with a sweet-salty caramelized crust — a quick Japanese-inspired weeknight dinner',
+      'Lamb kofta skewers with creamy tahini dipping sauce and warm flatbread — Middle Eastern street food at home',
+      'Brown butter financiers — classic French almond cakes with a nutty, caramelized crumb',
+      'Slow-roasted lamb shoulder braised with garlic, rosemary, and white wine until it falls apart — a proper Sunday centrepiece',
+      'Pasta e fagioli — the Italian peasant soup of pasta and cannellini beans in a rich tomato and rosemary broth',
+      'A classic sourdough country loaf with an open crumb, blistered crust, and complex tang — proper bread baking',
+    ]
+    const prompt = v1Dishes[Math.floor(Math.random() * v1Dishes.length)]
+    return NextResponse.json({ prompt })
+  }
 
   // Fetch all published recipe titles + cuisines to give GPT the full picture
   const existing = await db

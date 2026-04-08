@@ -113,7 +113,7 @@ export function AdminGenerator() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
-  async function suggest(mode: 'surprise' | 'bold' | 'yours') {
+  async function suggest(mode: 'surprise' | 'bold' | 'yours' | 'v1archive') {
     setSuggesting(mode)
     const res = await fetch('/api/admin/suggest-recipe', {
       method: 'POST',
@@ -321,6 +321,7 @@ export function AdminGenerator() {
                     { mode: 'surprise', label: '✦ Surprise me', title: 'Find a gap we haven\'t filled yet' },
                     { mode: 'bold', label: '⚡ Be Bold', title: 'Something wild from a lesser-known food culture' },
                     { mode: 'yours', label: '◎ Your Choice', title: 'A side, snack, or pairing for something we already have' },
+                    { mode: 'v1archive', label: '♻ From the Archive', title: 'Regenerate a v1 classic as a fresh v2 recipe' },
                   ] as const).map(({ mode, label, title }) => (
                     <button
                       key={mode}

@@ -8,10 +8,10 @@ import { Navbar } from '@/components/navbar'
 import { RecipeActions } from '@/components/recipe-actions'
 import { NutritionPanel } from '@/components/nutrition-panel'
 import { VariationButton } from '@/components/variation-button'
+import { IngredientsPanel } from '@/components/ingredients-panel'
 import { CookedItButton } from '@/components/cooked-it-button'
-import type { Metadata } from 'next'
 
-export const dynamic = 'force-dynamic'
+import type { Metadata } from 'next'
 
 export async function generateMetadata({
   params,
@@ -192,26 +192,7 @@ export default async function RecipePage({
         <div className="py-10 grid md:grid-cols-[1fr_2fr] gap-12 border-b border-line">
 
           {/* Ingredients */}
-          <div>
-            <h2 className="font-display text-2xl font-bold text-ink mb-6">Ingredients</h2>
-            <div className="space-y-6">
-              {recipe.ingredients.map((group) => (
-                <div key={group.group}>
-                  <p className="text-xs font-semibold tracking-[0.15em] uppercase text-ink-ghost mb-2">
-                    {group.group}
-                  </p>
-                  <ul className="space-y-2">
-                    {group.items.map((item) => (
-                      <li key={item} className="flex items-start gap-2 text-sm text-ink-dim">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-ember flex-shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
+          <IngredientsPanel ingredients={recipe.ingredients} />
 
           {/* Steps */}
           <div>
