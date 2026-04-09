@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { submissions, recipes, users } from '@/lib/db/schema'
+import { submissions, recipes, users, notifications } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 // ─── POST /api/admin/decide — publish or reject a submission
@@ -52,6 +52,22 @@ export async function POST(req: NextRequest) {
       publishedAt: decision === 'publish' ? new Date() : null,
     })
     .where(eq(recipes.id, sub.recipeId))
+
+  // Notify the submitter
+  if (decision === 'publish') {
+    const recipeRows = await db.select({ title: recipes.title, slug: recipes.slug }).from(recipes).where(eq(recipes.id, sub.recipeId)).limit(1)
+    const recipe = recipeRows[0]
+    if (recipe) {
+      db.insert(notifications).values({
+        id: crypto.randomUUID(),
+        userId: sub.submittedBy,
+        type: 'recipe_published',
+        message: `Your recipe "${recipe.title}" has been published!`,
+        recipeId: sub.recipeId,
+        recipeSlug: recipe.slug,
+      }).catch(() => {})
+    }
+  }
 
   return NextResponse.json({ ok: true })
 }

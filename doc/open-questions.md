@@ -53,6 +53,18 @@
 
 ---
 
+## Ambient Intelligence / Personal Chef Layer
+
+- [x] **Where does the week plan live in the DB?** — `weekPlan` JSON field on the user row. Same pattern as `savedRecipes` and `fridgeIngredients`. Displayed in My Kitchen under "This week" tab.
+- [x] **How proactive is too proactive?** — Indicator and insights only surface when 2+ recipes are in the plan. First add is a quiet confirmation only. Overlap shown on browse cards (subtle icon) and on recipe detail page (explicit callout). Frequency rule: ingredients in >30% of recipes are staples and never flagged.
+- [x] **Week reset cadence** — manual clear, with a Monday nudge. No auto-wipe (too aggressive mid-week). No history (unnecessary complexity). On Monday, My Kitchen shows a quiet "New week? Start fresh." prompt. User stays in control.
+- [x] **Ingredient overlap threshold** — 1 shared special ingredient is enough. Staples are already filtered by frequency rule, so anything that survives the filter is meaningful by definition.
+- [x] **Grocery list persistence** — persists on the user row as a `groceryList` text field until cleared or regenerated. Same pattern as `savedRecipes`, `fridgeIngredients`, `weekPlan`. Must survive navigation — users need it at the grocery store on their phone.
+- [x] **AI chat context** — the week plan feeds into the AI chat alongside fridge and dietary preferences. The AI is briefed on what's already planned before making new suggestions.
+- [x] **Fridge ↔ grocery list** — when generating the combined grocery list, cross-reference the user's fridge. Items already in the fridge are flagged ("you may have this") or removed from the list.
+
+---
+
 ## Answered Questions (Archived)
 
 | Question | Decision | Session |

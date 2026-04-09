@@ -174,7 +174,10 @@ export default async function HomePage() {
                     <h3 className="font-display text-base font-bold text-ink group-hover:text-ember transition-colors leading-snug">
                       {recipe.title}
                     </h3>
-                    <p className="text-xs text-ink-ghost mt-2">{recipe.totalTime} · {recipe.difficulty}</p>
+                    <p className="text-xs text-ink-ghost mt-2">
+                      {recipe.totalTime} · {recipe.difficulty}
+                      {recipe.saveCount > 0 && <span> · <span className="text-ember">♥</span> {recipe.saveCount}</span>}
+                    </p>
                   </div>
                 </a>
               ))}
@@ -216,6 +219,12 @@ export default async function HomePage() {
                     <span>{recipe.totalTime}</span>
                     <span className="w-1 h-1 rounded-full bg-line" />
                     <span>{recipe.difficulty}</span>
+                    {recipe.saveCount > 0 && (
+                      <>
+                        <span className="w-1 h-1 rounded-full bg-line" />
+                        <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </a>

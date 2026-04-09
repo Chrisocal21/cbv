@@ -76,6 +76,12 @@ export default async function CollectionPage({
                     <span>{recipe.totalTime}</span>
                     <span className="w-1 h-1 rounded-full bg-line" />
                     <span>{recipe.difficulty}</span>
+                    {recipe.saveCount > 0 && (
+                      <>
+                        <span className="w-1 h-1 rounded-full bg-line" />
+                        <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </a>

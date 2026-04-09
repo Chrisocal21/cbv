@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
-import { recipes, users, submissions, collections } from '@/lib/db/schema'
-import { eq, inArray, and, or, desc } from 'drizzle-orm'
+import { recipes, users, submissions, collections, cookedLog } from '@/lib/db/schema'
+import { eq, inArray, and, or, desc, gte, count } from 'drizzle-orm'
 import type { InferSelectModel } from 'drizzle-orm'
 
 export type RecipeRow = InferSelectModel<typeof recipes>
@@ -103,4 +103,41 @@ export async function getUserSubmissions(userId: string): Promise<(SubmissionRow
   return rows
     .filter((s) => recipeMap[s.recipeId])
     .map((s) => ({ ...s, recipe: recipeMap[s.recipeId] }))
+}
+
+// ─── Trending ─────────────────────────────────────────────────────────────────
+
+/**
+ * Returns up to `limit` published recipes trending this week.
+ * Primary signal: cook-log events in the last 7 days.
+ * Falls back to all-time saveCount when recent activity is sparse.
+ */
+export async function getTrendingRecipes(limit = 6): Promise<RecipeRow[]> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+  const trendRows = await db
+    .select({ recipeId: cookedLog.recipeId, cookCount: count() })
+    .from(cookedLog)
+    .where(gte(cookedLog.cookedAt, since))
+    .groupBy(cookedLog.recipeId)
+    .orderBy(desc(count()))
+    .limit(limit)
+
+  if (trendRows.length >= 4) {
+    const ids = trendRows.map((r) => r.recipeId)
+    const rows = await db
+      .select()
+      .from(recipes)
+      .where(and(inArray(recipes.id, ids), eq(recipes.status, 'published')))
+    const orderMap = Object.fromEntries(ids.map((id, i) => [id, i]))
+    return rows.sort((a, b) => (orderMap[a.id] ?? 99) - (orderMap[b.id] ?? 99))
+  }
+
+  // Fallback: most saved published recipes
+  return db
+    .select()
+    .from(recipes)
+    .where(eq(recipes.status, 'published'))
+    .orderBy(desc(recipes.saveCount))
+    .limit(limit)
 }

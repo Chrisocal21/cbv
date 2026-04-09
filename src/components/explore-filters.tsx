@@ -205,6 +205,12 @@ export function ExploreFilters({
                         <span>{recipe.totalTime}</span>
                         <span className="w-1 h-1 rounded-full bg-line" />
                         <span>{recipe.difficulty}</span>
+                        {recipe.saveCount > 0 && (
+                          <>
+                            <span className="w-1 h-1 rounded-full bg-line" />
+                            <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
+                          </>
+                        )}
                       </div>
                       {recipe.dietaryTags.slice(0, 1).map((t) => (
                         <span key={t} className="text-xs border border-line text-ink-ghost px-2 py-0.5 rounded-full">

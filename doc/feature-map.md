@@ -117,12 +117,37 @@
 
 - [ ] Public user profiles — bio, published recipes, public collections
 - [ ] Public collections — shareable "cookbooks" anyone can follow
-- [ ] Recipe ratings — simple save-based popularity or optional 5-star
-- [ ] AI grocery list generator — from any recipe or collection
-- [ ] "Cook this week" — select recipes, AI generates a weekly meal plan with grocery list
+- [x] Recipe ratings — save-based popularity shown on all recipe cards + detail page
+- [x] AI grocery list generator — from any recipe (button on recipe detail page)
+- [ ] Smart week plan — *ambient intelligence layer*
+  - **Storage**: `weekPlan` JSON field on user row (same pattern as `savedRecipes` and `fridgeIngredients`)
+  - **UI home**: My Kitchen → private "This week" tab
+  - "Add to this week" button on any recipe card or detail page
+  - **Browse indicator**: subtle icon on explore/collection cards when a recipe shares a meaningful ingredient with something already in the week plan — only special/non-staple ingredients (coconut milk, miso, fish sauce etc), not salt/garlic/oil. Frequency rule: ingredients appearing in >30% of recipes are staples, not flagged.
+  - **Threshold**: indicator and insights only surface when 2+ recipes are in the plan — one recipe has no pattern to surface
+  - Recipe detail page shows exact overlap: "You're making X this week — both need coconut milk"
+  - My Kitchen → This week → combined grocery list: deduplicated, category-sorted, check-offable, **cross-referenced against fridge** (items already in fridge are flagged or removed — you already have it)
+  - **AI chat knows your week plan** — alongside fridge + dietary prefs, the AI is briefed on what you're already cooking so suggestions build on, not repeat, the plan
+  - Suggests swap recipes from your saves that increase ingredient overlap
+  - **Reset**: manual clear + Monday nudge ("New week? Start fresh.")
+  - **Grocery list persistence**: `groceryList` text field on user row — survives navigation, accessible on mobile at the store
+
+  **Build order:**
+  - [ ] ⚠️ Run `0010_notifications.sql` migration against Neon DB first — notifications 500 error until this is applied
+  - [ ] Add `weekPlan` + `groceryList` fields to user schema + migration
+  - [ ] `POST /api/user/week-plan` — add/remove recipe from plan
+  - [ ] `GET /api/user/week-plan` — return plan recipes with overlap analysis
+  - [ ] "Add to this week" button on recipe detail page + recipe cards
+  - [ ] Browse card overlap indicator (explore + collections pages)
+  - [ ] Recipe detail page overlap callout
+  - [ ] My Kitchen → "This week" tab
+  - [ ] Combined grocery list generator (fridge cross-reference + `/api/ai/week-grocery-list`)
+  - [ ] Checklist UI with persistence
+  - [ ] Wire week plan into AI chat context
+  - [ ] Monday nudge on My Kitchen tab
 - [ ] Comments on recipes — moderated, quality-first
-- [ ] "Trending this week" surface on explore page
-- [ ] Notification system — your recipe was published, someone saved your recipe
+- [x] "Trending this week" surface on explore page
+- [x] Notification system — your recipe was published, someone saved your recipe
 
 ---
 
@@ -139,7 +164,24 @@
 
 ---
 
-## Features Considered and Cut (for now)
+## Infrastructure
+
+- [ ] **Migrate image storage from Vercel Blob → Cloudflare R2**
+  - Vercel Blob limits: 1 GB storage, 2k advanced ops, 10 GB transfer — will be hit as recipe images grow
+  - R2 is free tier: 10 GB storage, 1M ops/month, zero egress fees
+  - Only two files to change: `generate-image/route.ts` + `generate-collection-image/route.ts`
+  - Steps when ready:
+    1. Create R2 bucket `cbv-images` in Cloudflare dashboard
+    2. Add custom domain (e.g. `images.yourdomain.com`) on the bucket for public URLs
+    3. Create R2 API token — need Account ID, Access Key ID, Secret Access Key
+    4. Add env vars: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`
+    5. Install `@aws-sdk/client-s3` (R2 is S3-compatible)
+    6. Swap `put()` from `@vercel/blob` for S3 `PutObjectCommand` in both route files
+    7. One-time script to copy existing blobs to R2 + update image URLs in DB
+
+---
+
+
 
 | Feature | Why Cut |
 |---|---|

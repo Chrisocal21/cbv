@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { users, recipes } from '@/lib/db/schema'
+import { users, recipes, notifications } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
 
 // Ensure a user row exists (Clerk users aren't automatically synced to our DB)
@@ -43,6 +43,28 @@ export async function POST(req: NextRequest) {
     .set({ saveCount: sql`${recipes.saveCount} + ${isSaved ? -1 : 1}` })
     .where(eq(recipes.id, recipeId))
     .catch(() => {})
+
+  // Notify the recipe author when saved (not when unsaved, not self-saves)
+  if (!isSaved) {
+    db.select({ authorId: recipes.authorId, title: recipes.title, slug: recipes.slug })
+      .from(recipes)
+      .where(eq(recipes.id, recipeId))
+      .limit(1)
+      .then((rows) => {
+        const recipe = rows[0]
+        if (recipe?.authorId && recipe.authorId !== userId) {
+          return db.insert(notifications).values({
+            id: crypto.randomUUID(),
+            userId: recipe.authorId,
+            type: 'recipe_saved',
+            message: `Someone saved your recipe "${recipe.title}".`,
+            recipeId,
+            recipeSlug: recipe.slug,
+          })
+        }
+      })
+      .catch(() => {})
+  }
 
   return NextResponse.json({ saved: !isSaved, savedRecipes: updated })
 }

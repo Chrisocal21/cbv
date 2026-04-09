@@ -129,6 +129,13 @@ export default async function RecipePage({
           <p className="text-xl text-ink-dim font-display italic mb-5">{recipe.subtitle}</p>
           <p className="text-base text-ink-dim leading-relaxed max-w-2xl">{recipe.description}</p>
 
+          {/* Popularity */}
+          {recipe.saveCount > 0 && (
+            <p className="text-sm text-ink-ghost mt-3">
+              <span className="text-ember">♥</span> {recipe.saveCount.toLocaleString()} {recipe.saveCount === 1 ? 'person has' : 'people have'} saved this
+            </p>
+          )}
+
           {/* Tags */}
           <div className="flex flex-wrap gap-2 mt-5">
             {recipe.dietaryTags.map((tag) => (
@@ -169,7 +176,7 @@ export default async function RecipePage({
 
         {/* Save / Share */}
         <div data-print-hide>
-          <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} isOwnerDraft={isOwnerDraft} />
+          <RecipeActions recipeId={recipe.id} recipeTitle={recipe.title} ingredients={recipe.ingredients as { group: string; items: string[] }[]} servings={recipe.servings} isOwnerDraft={isOwnerDraft} />
           <div className="flex flex-wrap gap-2 mt-3">
             {canEdit && (
               <a

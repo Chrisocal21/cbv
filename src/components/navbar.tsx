@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 import { useTheme } from './theme-provider'
@@ -100,7 +100,10 @@ export function Navbar() {
             </SignInButton>
           )}
           {isSignedIn && (
-            <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+            <>
+              <NotificationBell />
+              <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+            </>
           )}
 
           {/* Hamburger — mobile only */}
@@ -194,6 +197,109 @@ function SearchIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" />
       <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  )
+}
+
+type Notification = {
+  id: string
+  type: string
+  message: string
+  recipeSlug: string | null
+  read: boolean
+  createdAt: string
+}
+
+function NotificationBell() {
+  const [open, setOpen] = useState(false)
+  const [notifs, setNotifs] = useState<Notification[]>([])
+  const [unread, setUnread] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetch('/api/user/notifications')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data) {
+          setNotifs(data.notifications)
+          setUnread(data.unreadCount)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [open])
+
+  async function handleOpen() {
+    setOpen((v) => !v)
+    if (!open && unread > 0) {
+      await fetch('/api/user/notifications', { method: 'PATCH' })
+      setUnread(0)
+      setNotifs((ns) => ns.map((n) => ({ ...n, read: true })))
+    }
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={handleOpen}
+        aria-label="Notifications"
+        className="relative w-9 h-9 flex items-center justify-center rounded-full border border-line bg-panel hover:bg-panel-raised text-ink-dim hover:text-ink transition-colors"
+      >
+        <BellIcon />
+        {unread > 0 && (
+          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-ember" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-panel border border-line rounded-xl shadow-lg overflow-hidden">
+          <div className="px-4 py-3 border-b border-line">
+            <p className="text-sm font-semibold text-ink">Notifications</p>
+          </div>
+          {notifs.length === 0 ? (
+            <p className="text-xs text-ink-ghost px-4 py-4">Nothing yet. Check back after your first recipe is saved.</p>
+          ) : (
+            <ul className="divide-y divide-line max-h-72 overflow-y-auto">
+              {notifs.map((n) => (
+                <li key={n.id}>
+                  {n.recipeSlug ? (
+                    <a
+                      href={`/recipe/${n.recipeSlug}`}
+                      onClick={() => setOpen(false)}
+                      className="block px-4 py-3 hover:bg-page transition-colors"
+                    >
+                      <p className="text-sm text-ink leading-snug">{n.message}</p>
+                      <p className="text-xs text-ink-ghost mt-1">{new Date(n.createdAt).toLocaleDateString()}</p>
+                    </a>
+                  ) : (
+                    <div className="px-4 py-3">
+                      <p className="text-sm text-ink leading-snug">{n.message}</p>
+                      <p className="text-xs text-ink-ghost mt-1">{new Date(n.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BellIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
   )
 }

@@ -1,4 +1,4 @@
-import { getAllRecipes } from '@/lib/queries'
+import { getAllRecipes, getTrendingRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { ExploreFilters } from '@/components/explore-filters'
 
@@ -9,7 +9,7 @@ export default async function ExplorePage({
 }: {
   searchParams: Promise<{ search?: string; collection?: string; dietary?: string; mood?: string; difficulty?: string }>
 }) {
-  const recipes = await getAllRecipes()
+  const [recipes, trending] = await Promise.all([getAllRecipes(), getTrendingRecipes(6)])
   const params = await searchParams
 
   const initialFilters = {
@@ -36,6 +36,42 @@ export default async function ExplorePage({
             {recipes.length} recipes and counting. Filter by what you are looking for, or just wander.
           </p>
         </div>
+
+        {/* Trending this week */}
+        {trending.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-baseline justify-between mb-5">
+              <div>
+                <h2 className="font-display text-xl font-bold text-ink">Trending this week</h2>
+                <p className="text-sm text-ink-ghost mt-0.5">What people are cooking right now</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {trending.map((recipe) => (
+                <a
+                  key={recipe.id}
+                  href={`/recipe/${recipe.slug}`}
+                  className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
+                >
+                  <div className={`aspect-square overflow-hidden relative ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+                    {recipe.imageUrl && (
+                      <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs font-semibold tracking-[0.1em] uppercase text-ink-ghost mb-1 truncate">
+                      {recipe.collection}
+                    </p>
+                    <h3 className="font-display text-sm font-bold text-ink group-hover:text-ember transition-colors leading-snug line-clamp-2">
+                      {recipe.title}
+                    </h3>
+                    <p className="text-xs text-ink-ghost mt-1.5">{recipe.totalTime}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         <ExploreFilters recipes={recipes} initialFilters={initialFilters} />
       </div>

@@ -143,3 +143,16 @@ export const cookedLog = pgTable('cooked_log', {
   notes: text('notes').default(''),
 })
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export const notifications = pgTable('notifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  type: text('type').notNull(), // 'recipe_published' | 'recipe_saved'
+  message: text('message').notNull(),
+  recipeId: text('recipe_id'),
+  recipeSlug: text('recipe_slug'),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+

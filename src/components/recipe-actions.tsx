@@ -5,14 +5,19 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
 type UserCollection = { id: string; name: string; recipeIds: string[] }
+type Ingredient = { group: string; items: string[] }
 
 export function RecipeActions({
   recipeId,
   recipeTitle,
+  ingredients = [],
+  servings = '',
   isOwnerDraft = false,
 }: {
   recipeId: string
   recipeTitle: string
+  ingredients?: Ingredient[]
+  servings?: string
   isOwnerDraft?: boolean
 }) {
   const { isSignedIn } = useUser()
@@ -24,6 +29,9 @@ export function RecipeActions({
   const [collOpen, setCollOpen] = useState(false)
   const [collections, setCollections] = useState<UserCollection[] | null>(null)
   const [collStatus, setCollStatus] = useState<Record<string, boolean>>({})
+  const [groceryList, setGroceryList] = useState<string | null>(null)
+  const [groceryState, setGroceryState] = useState<'idle' | 'loading' | 'done'>('idle')
+  const [groceryCopied, setGroceryCopied] = useState(false)
   const collRef = useRef<HTMLDivElement>(null)
 
   async function openCollections() {
@@ -87,6 +95,28 @@ export function RecipeActions({
     }
   }
 
+  const handleGroceryList = async () => {
+    if (groceryState === 'loading') return
+    if (groceryState === 'done') {
+      setGroceryState('idle')
+      setGroceryList(null)
+      return
+    }
+    setGroceryState('loading')
+    const res = await fetch('/api/ai/grocery-list', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: recipeTitle, servings, ingredients }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setGroceryList(data.list)
+      setGroceryState('done')
+    } else {
+      setGroceryState('idle')
+    }
+  }
+
   const handleSubmit = async () => {
     setSubmitState('loading')
     const res = await fetch('/api/user/submit-recipe', {
@@ -103,6 +133,7 @@ export function RecipeActions({
   }
 
   return (
+    <>
     <div className="flex items-center gap-3 py-5 border-b border-line flex-wrap">
       {isOwnerDraft && (
         <button
@@ -181,7 +212,38 @@ export function RecipeActions({
           )}
         </div>
       )}
+      <button
+        onClick={handleGroceryList}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+          groceryState === 'done'
+            ? 'bg-ember text-white border-ember hover:bg-ember/90'
+            : 'bg-panel border-line text-ink-dim hover:border-ember hover:text-ink'
+        }`}
+      >
+        <ListIcon />
+        {groceryState === 'loading' ? 'Generating…' : groceryState === 'done' ? 'Grocery list ✓' : 'Grocery list'}
+      </button>
     </div>
+
+    {groceryState === 'done' && groceryList && (
+      <div className="mt-4 p-5 rounded-xl border border-line bg-panel">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-ink">Grocery list for {recipeTitle}</h3>
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(groceryList)
+              setGroceryCopied(true)
+              setTimeout(() => setGroceryCopied(false), 2000)
+            }}
+            className="text-xs text-ink-ghost hover:text-ember transition-colors px-3 py-1 rounded-full border border-line hover:border-ember"
+          >
+            {groceryCopied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+        <pre className="text-sm text-ink-dim whitespace-pre-wrap font-sans leading-relaxed">{groceryList}</pre>
+      </div>
+    )}
+  </>
   )
 }
 
@@ -207,6 +269,19 @@ function FolderIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
     </svg>
   )
 }
