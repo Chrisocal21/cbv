@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
-import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile, getUserCookedRecipeIds } from '@/lib/queries'
+import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile, getUserCookedRecipeIds, getTrendingRecipes } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
@@ -7,12 +7,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const { userId } = await auth()
-  const [featured, allRecipes, dbCollections, profile, cookedRecipeIds] = await Promise.all([
+  const [featured, allRecipes, dbCollections, profile, cookedRecipeIds, trendingRecipes] = await Promise.all([
     getFeaturedRecipe(),
     getAllRecipes(),
     getCollectionsWithSpotlight(),
     userId ? getUserProfile(userId) : null,
     userId ? getUserCookedRecipeIds(userId) : Promise.resolve([] as string[]),
+    getTrendingRecipes(6),
   ])
 
   // New additions — most recent 3 published recipes (excluding featured)
@@ -161,6 +162,42 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* Trending this week */}
+        {trendingRecipes.length > 0 && (
+          <section className="mx-auto max-w-7xl px-6 mb-20">
+            <div className="flex items-baseline justify-between mb-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">Trending this week</h2>
+                <p className="text-sm text-ink-ghost mt-1">What people are actually cooking</p>
+              </div>
+              <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">See all</a>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {trendingRecipes.map((recipe, i) => (
+                <a
+                  key={recipe.id}
+                  href={`/recipe/${recipe.slug}`}
+                  className="group flex gap-4 rounded-xl border border-line bg-panel hover:border-ember transition-all p-4"
+                >
+                  <span className="text-2xl font-display font-bold text-line group-hover:text-ember/40 transition-colors tabular-nums shrink-0 w-7 pt-0.5">{i + 1}</span>
+                  <div className="flex gap-4 flex-1 min-w-0">
+                    <div className={`w-16 h-16 rounded-lg shrink-0 overflow-hidden relative ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+                      {recipe.imageUrl && (
+                        <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold tracking-[0.12em] uppercase text-ink-ghost mb-1">{recipe.collection}</p>
+                      <h3 className="font-display text-sm font-bold text-ink group-hover:text-ember transition-colors leading-snug line-clamp-2">{recipe.title}</h3>
+                      <p className="text-xs text-ink-ghost mt-1.5">{recipe.totalTime} · {recipe.difficulty}</p>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Picked for you */}
         {personalisedRecipes.length > 0 && (
