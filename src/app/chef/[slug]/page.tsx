@@ -6,6 +6,7 @@ import {
   getUserByUsername,
   getPublishedRecipesByUser,
   getPublishedRecipesByStaff,
+  getPublicCollectionsByUser,
 } from '@/lib/queries'
 
 export const dynamic = 'force-dynamic'
@@ -165,7 +166,10 @@ export default async function ChefPage({
   const user = await getUserByUsername(slug)
   if (!user) notFound()
 
-  const recipes = await getPublishedRecipesByUser(user.id)
+  const [recipes, publicCollections] = await Promise.all([
+    getPublishedRecipesByUser(user.id),
+    getPublicCollectionsByUser(user.id),
+  ])
   const displayName = user.displayName ?? user.username ?? 'Chef'
   const initial = displayName[0]?.toUpperCase() ?? '?'
 
@@ -193,43 +197,75 @@ export default async function ChefPage({
             {user.bio && (
               <p className="text-sm text-ink-dim mt-2 max-w-lg leading-relaxed">{user.bio}</p>
             )}
-            <p className="text-xs text-ink-ghost mt-3">
-              {recipes.length} published {recipes.length === 1 ? 'recipe' : 'recipes'}
-            </p>
+            <div className="flex gap-4 mt-3 text-xs text-ink-ghost">
+              <span>{recipes.length} published {recipes.length === 1 ? 'recipe' : 'recipes'}</span>
+              {publicCollections.length > 0 && (
+                <>
+                  <span>·</span>
+                  <span>{publicCollections.length} {publicCollections.length === 1 ? 'collection' : 'collections'}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recipes */}
-      <div className="mx-auto max-w-5xl px-6 py-14">
-        {recipes.length === 0 ? (
-          <div className="text-center py-24 text-ink-ghost">
-            <p className="font-display text-xl">No published recipes yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recipes.map((recipe) => (
-              <Link
-                key={recipe.id}
-                href={`/recipe/${recipe.slug}`}
-                className="group block rounded-xl border border-line bg-panel hover:border-ember transition-colors overflow-hidden"
-              >
-                <div className={`h-28 bg-gradient-to-br ${recipe.gradient}`} />
-                <div className="p-4">
-                  <h3 className="font-display font-bold text-ink text-sm leading-snug group-hover:text-ember transition-colors line-clamp-2 mb-1">
-                    {recipe.title}
-                  </h3>
-                  <p className="text-xs text-ink-ghost font-display italic line-clamp-1">{recipe.subtitle}</p>
-                  <div className="flex items-center gap-3 mt-3 text-xs text-ink-ghost">
-                    <span>{recipe.cuisine}</span>
-                    <span>·</span>
-                    <span>{recipe.totalTime}</span>
-                  </div>
+      <div className="mx-auto max-w-5xl px-6 py-14 space-y-16">
+
+        {/* Collections */}
+        {publicCollections.length > 0 && (
+          <div>
+            <h2 className="font-display text-2xl font-bold text-ink mb-6">Collections</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {publicCollections.map((col) => (
+                <div key={col.id} className="rounded-xl border border-line bg-panel p-5">
+                  <h3 className="font-display font-bold text-ink text-sm mb-1">{col.name}</h3>
+                  {col.description && (
+                    <p className="text-xs text-ink-ghost line-clamp-2">{col.description}</p>
+                  )}
                 </div>
-              </Link>
-            ))}
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Recipes */}
+        <div>
+          <h2 className="font-display text-2xl font-bold text-ink mb-6">Recipes</h2>
+          {recipes.length === 0 ? (
+            <div className="text-center py-24 text-ink-ghost">
+              <p className="font-display text-xl">No published recipes yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recipes.map((recipe) => (
+                <Link
+                  key={recipe.id}
+                  href={`/recipe/${recipe.slug}`}
+                  className="group block rounded-xl border border-line bg-panel hover:border-ember transition-colors overflow-hidden"
+                >
+                  <div className={`h-32 relative ${recipe.imageUrl ? 'bg-black' : `bg-gradient-to-br ${recipe.gradient}`}`}>
+                    {recipe.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover opacity-90" />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-display font-bold text-ink text-sm leading-snug group-hover:text-ember transition-colors line-clamp-2 mb-1">
+                      {recipe.title}
+                    </h3>
+                    <p className="text-xs text-ink-ghost font-display italic line-clamp-1">{recipe.subtitle}</p>
+                    <div className="flex items-center gap-3 mt-3 text-xs text-ink-ghost">
+                      <span>{recipe.cuisine}</span>
+                      <span>·</span>
+                      <span>{recipe.totalTime}</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

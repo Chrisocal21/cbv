@@ -11,10 +11,19 @@ export async function PATCH(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
 
-  const { displayName, bio, dietaryPreferences } = await req.json()
+  const { displayName, bio, dietaryPreferences, username } = await req.json()
 
   // Ensure user row exists
   await db.insert(users).values({ id: userId }).onConflictDoNothing()
+
+  // Validate username: alphanumeric + hyphens, 3-30 chars
+  let sanitizedUsername: string | null = null
+  if (username !== undefined) {
+    const cleaned = String(username).trim().toLowerCase().replace(/[^a-z0-9-]/g, '')
+    if (cleaned.length >= 3 && cleaned.length <= 30) {
+      sanitizedUsername = cleaned
+    }
+  }
 
   await db
     .update(users)
@@ -22,6 +31,7 @@ export async function PATCH(req: NextRequest) {
       displayName: displayName ?? null,
       bio: bio ?? null,
       dietaryPreferences: Array.isArray(dietaryPreferences) ? dietaryPreferences : [],
+      ...(sanitizedUsername !== null ? { username: sanitizedUsername } : {}),
     })
     .where(eq(users.id, userId))
 
@@ -40,5 +50,6 @@ export async function GET() {
     displayName: user?.displayName ?? '',
     bio: user?.bio ?? '',
     dietaryPreferences: user?.dietaryPreferences ?? [],
+    username: user?.username ?? '',
   })
 }

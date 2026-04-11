@@ -167,3 +167,10 @@ export async function getUserByUsername(username: string): Promise<UserRow | und
   const rows = await db.select().from(users).where(eq(users.username, username)).limit(1)
   return rows[0]
 }
+
+/** Public collections for a user (non-empty ones only) */
+export async function getPublicCollectionsByUser(userId: string) {
+  const { userCollections } = await import('@/lib/db/schema')
+  const rows = await db.select().from(userCollections).where(eq(userCollections.userId, userId))
+  return rows
+}

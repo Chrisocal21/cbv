@@ -1,8 +1,10 @@
+import React from 'react'
 import { redirect } from 'next/navigation'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { UserCollections } from '@/components/user-collections'
+import { AIChat } from '@/components/ai-chat'
 import { db } from '@/lib/db'
 import { userCollections, cookedLog } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -78,10 +80,10 @@ function RecipeCard({ recipe, showStatus = false }: { recipe: RecipeRow; showSta
   )
 }
 
-function EmptyState({ icon, message }: { icon: string; message: string }) {
+function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
   return (
     <div className="py-16 text-center">
-      <p className="text-3xl mb-3">{icon}</p>
+      <div className="flex justify-center mb-4 text-ink-ghost">{icon}</div>
       <p className="text-sm text-ink-ghost">{message}</p>
     </div>
   )
@@ -98,7 +100,7 @@ export default async function ProfilePage({
   if (!userId) redirect('/')
 
   const { tab } = await searchParams
-  const activeTab = tab ?? 'my-recipes'
+  const activeTab = tab ?? 'home'
 
   const [clerkUser, profile, myRecipes, submissions, myCollections, cookedEntries] = await Promise.all([
     currentUser(),
@@ -120,85 +122,198 @@ export default async function ProfilePage({
 
   const displayName = profile?.displayName ?? clerkUser?.firstName ?? 'Chef'
   const avatarUrl   = profile?.avatarUrl ?? clerkUser?.imageUrl
+  const fridgeIngredients = profile?.fridgeIngredients ?? []
 
   const tabs = [
-    { id: 'my-recipes',   label: 'My recipes',     count: myRecipes.length },
-    { id: 'saved',        label: 'Saved',           count: savedRecipes.length },
-    { id: 'submissions',  label: 'Submissions',     count: submissions.length },
-    { id: 'collections',  label: 'My collections',  count: myCollections.length },
-    { id: 'cook-log',     label: 'Cook log',        count: cookedEntries.length },
+    { id: 'home',        label: 'Home' },
+    { id: 'ai',          label: 'AI Kitchen' },
+    { id: 'recipes',     label: 'Recipes',     count: myRecipes.length },
+    { id: 'saved',       label: 'Saved',       count: savedRecipes.length },
+    { id: 'collections', label: 'Collections', count: myCollections.length },
+    { id: 'cook-log',    label: 'Cook log',    count: cookedEntries.length },
   ]
 
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
 
-      {/* Profile header */}
+      {/* ── Compact header ─────────────────────────────── */}
       <div className="border-b border-line bg-panel">
-        <div className="mx-auto max-w-5xl px-6 py-10 flex items-center gap-6">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-5 flex items-center gap-4">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt={displayName} className="w-16 h-16 rounded-full object-cover border-2 border-line" />
+            <img src={avatarUrl} alt={displayName} className="w-12 h-12 rounded-full object-cover border-2 border-line flex-shrink-0" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-ember/20 border-2 border-ember/30 flex items-center justify-center">
-              <span className="font-display font-bold text-ember text-2xl">{displayName[0]?.toUpperCase()}</span>
+            <div className="w-12 h-12 rounded-full bg-ember/20 border-2 border-ember/30 flex items-center justify-center flex-shrink-0">
+              <span className="font-display font-bold text-ember text-lg">{displayName[0]?.toUpperCase()}</span>
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="font-display text-2xl font-bold text-ink">{displayName}</h1>
-              <a href="/fridge" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1">
-                My fridge
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-xl font-bold text-ink leading-none">{displayName}</h1>
+            <p className="text-xs text-ink-ghost mt-1">My Kitchen</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {profile?.username && (
+              <a href={`/chef/${profile.username}`} className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1.5 hidden sm:block">
+                Public profile
               </a>
-              <a href="/settings" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1">
-                Edit profile
-              </a>
-            </div>
-            <div className="flex flex-wrap gap-4 mt-2 text-xs text-ink-ghost">
-              <span>{published.length} published</span>
-              <span>·</span>
-              <span>{savedRecipes.length} saved</span>
-              <span>·</span>
-              <span>{submissions.length} submitted</span>
-            </div>
+            )}
+            <a href="/settings" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1.5">
+              Settings
+            </a>
           </div>
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="border-b border-line bg-page sticky top-16 z-40 backdrop-blur-sm bg-page/90">
-        <div className="mx-auto max-w-5xl px-6 flex gap-1">
-          {tabs.map((t) => (
-            <Link
-              key={t.id}
-              href={`/profile?tab=${t.id}`}
-              className={`relative flex items-center gap-2 px-4 py-4 text-sm font-medium transition-colors ${
-                activeTab === t.id
-                  ? 'text-ink after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-ember'
-                  : 'text-ink-ghost hover:text-ink-dim'
-              }`}
-            >
-              {t.label}
-              {t.count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  activeTab === t.id ? 'bg-ember/20 text-ember' : 'bg-panel text-ink-ghost'
-                }`}>
-                  {t.count}
-                </span>
-              )}
-            </Link>
-          ))}
+      {/* ── Tab bar ── scrollable on mobile ─────────────── */}
+      <div className="border-b border-line bg-page/90 sticky top-16 z-40 backdrop-blur-sm">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex gap-0 overflow-x-auto scrollbar-none">
+            {tabs.map((t) => (
+              <Link
+                key={t.id}
+                href={`/profile?tab=${t.id}`}
+                className={`relative flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 py-3.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === t.id
+                    ? 'text-ink after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-ember'
+                    : 'text-ink-ghost hover:text-ink-dim'
+                }`}
+              >
+                {t.id === 'ai' && (
+                  <svg className="w-3.5 h-3.5 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                )}
+                {t.label}
+                {'count' in t && (t.count ?? 0) > 0 && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    activeTab === t.id ? 'bg-ember/20 text-ember' : 'bg-panel text-ink-ghost'
+                  }`}>
+                    {t.count}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Tab content */}
-      <div className="mx-auto max-w-5xl px-6 py-10">
+      {/* ── Tab content ───────────────────────────────── */}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8">
+
+        {/* ── Home / Dashboard ── */}
+        {activeTab === 'home' && (
+          <div className="space-y-10">
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Published', value: published.length },
+                { label: 'Saved',     value: savedRecipes.length },
+                { label: 'Cooked',    value: cookedEntries.length },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-panel border border-line rounded-xl px-4 py-4 text-center">
+                  <p className="font-display text-2xl sm:text-3xl font-bold text-ink">{stat.value}</p>
+                  <p className="text-xs text-ink-ghost mt-1">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick actions */}
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-4">Quick actions</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Link href="/profile?tab=ai" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
+                  <svg className="w-6 h-6 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">AI Kitchen</span>
+                  <span className="text-xs text-ink-ghost">Generate a recipe</span>
+                </Link>
+                <Link href="/submit" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
+                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Submit</span>
+                  <span className="text-xs text-ink-ghost">Add your own recipe</span>
+                </Link>
+                <Link href="/fridge" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
+                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h12a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18v-2.25z" /></svg>
+                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">My fridge</span>
+                  <span className="text-xs text-ink-ghost">{fridgeIngredients.length > 0 ? `${fridgeIngredients.length} items` : 'What\'s in there?'}</span>
+                </Link>
+                <Link href="/explore" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
+                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" /></svg>
+                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Explore</span>
+                  <span className="text-xs text-ink-ghost">Find new recipes</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Recent recipes */}
+            {myRecipes.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Recent recipes</h2>
+                  <Link href="/profile?tab=recipes" className="text-xs text-ember hover:underline">See all</Link>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {myRecipes.slice(0, 3).map((r) => <RecipeCard key={r.id} recipe={r} showStatus />)}
+                </div>
+              </div>
+            )}
+
+            {/* Recent cook log */}
+            {cookedEntries.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Recently cooked</h2>
+                  <Link href="/profile?tab=cook-log" className="text-xs text-ember hover:underline">See all</Link>
+                </div>
+                <div className="space-y-2">
+                  {cookedEntries.slice(0, 4).map((entry) => (
+                    <div key={entry.id} className="bg-panel border border-line rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                      <p className="text-sm text-ink font-medium truncate">{entry.notes || 'Cooked a recipe'}</p>
+                      <p className="text-xs text-ink-ghost flex-shrink-0">
+                        {new Date(entry.cookedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Empty welcome */}
+            {myRecipes.length === 0 && cookedEntries.length === 0 && (
+              <div className="text-center py-16">
+                <div className="flex justify-center mb-4">
+                  <svg className="w-12 h-12 text-ink-ghost" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 19.128v-.003c0-1.113-.425-2.188-1.184-2.995a3.75 3.75 0 00-2.816-1.253 3.75 3.75 0 00-2.816 1.253C7.425 16.94 7 18.015 7 19.128v.003M12 19.128v-.003M6 14.25h.008v.008H6v-.008zm3.75 0h.008v.008H9.75v-.008zm3.75 0h.008v.008h-.008v-.008z" /></svg>
+                </div>
+                <p className="font-display text-xl text-ink mb-2">Welcome to your kitchen</p>
+                <p className="text-sm text-ink-ghost mb-6">Start by asking the AI to generate a recipe, or submit one you already love.</p>
+                <Link href="/profile?tab=ai" className="inline-flex items-center gap-2 bg-ember text-white px-6 py-3 rounded-full font-semibold text-sm hover:bg-ember/90 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                  Open AI Kitchen
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── AI Kitchen ── */}
+        {activeTab === 'ai' && (
+          <div>
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
+                <p className="text-xs font-semibold tracking-[0.2em] uppercase text-ember">AI Kitchen</p>
+              </div>
+              <h2 className="font-display text-2xl font-bold text-ink">What do you want to cook?</h2>
+              <p className="text-sm text-ink-dim mt-1">Tell it what&apos;s in your fridge. Describe a craving. Ask it to adapt something.</p>
+            </div>
+            <AIChat />
+          </div>
+        )}
 
         {/* ── My Recipes ── */}
-        {activeTab === 'my-recipes' && (
+        {activeTab === 'recipes' && (
           <div className="space-y-10">
             {myRecipes.length === 0 && (
-              <EmptyState icon="🍳" message="You haven't created any recipes yet. Try the AI Kitchen or submit one manually." />
+              <EmptyState icon={<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 19.128v-.003c0-1.113-.425-2.188-1.184-2.995a3.75 3.75 0 00-2.816-1.253 3.75 3.75 0 00-2.816 1.253C7.425 16.94 7 18.015 7 19.128v.003M12 19.128v-.003M6 14.25h.008v.008H6v-.008zm3.75 0h.008v.008H9.75v-.008zm3.75 0h.008v.008h-.008v-.008z" /></svg>} message="No recipes yet. Try the AI Kitchen or submit one manually." />
             )}
 
             {published.length > 0 && (
@@ -256,7 +371,7 @@ export default async function ProfilePage({
         {activeTab === 'saved' && (
           <div>
             {savedRecipes.length === 0 ? (
-              <EmptyState icon="🔖" message="No saved recipes yet. Hit 'Save recipe' on any recipe page or in the AI Kitchen." />
+              <EmptyState icon={<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" /></svg>} message="No saved recipes yet. Hit 'Save recipe' on any recipe page or in the AI Kitchen." />
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {savedRecipes.map((r) => <RecipeCard key={r.id} recipe={r} />)}
@@ -269,7 +384,7 @@ export default async function ProfilePage({
         {activeTab === 'submissions' && (
           <div>
             {submissions.length === 0 ? (
-              <EmptyState icon="📬" message="You haven't submitted any recipes for review yet." />
+              <EmptyState icon={<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>} message="You haven't submitted any recipes for review yet." />
             ) : (
               <div className="space-y-3">
                 {submissions.map((s) => {

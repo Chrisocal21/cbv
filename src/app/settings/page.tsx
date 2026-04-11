@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const router = useRouter()
 
   const [displayName, setDisplayName] = useState('')
+  const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
   const [dietary, setDietary] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +37,7 @@ export default function SettingsPage() {
       .then((r) => r.json())
       .then((data) => {
         setDisplayName(data.displayName ?? '')
+        setUsername(data.username ?? '')
         setBio(data.bio ?? '')
         setDietary(data.dietaryPreferences ?? [])
       })
@@ -50,7 +52,7 @@ export default function SettingsPage() {
     await fetch('/api/user/settings', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ displayName, bio, dietaryPreferences: dietary }),
+      body: JSON.stringify({ displayName, username, bio, dietaryPreferences: dietary }),
     })
     setSaving(false)
     setSaved(true)
@@ -94,6 +96,28 @@ export default function SettingsPage() {
               placeholder="How you appear on the platform"
               className="w-full px-4 py-3 rounded-xl border border-line bg-panel text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors text-sm"
             />
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-2">
+              Username
+            </label>
+            <div className="flex items-center gap-0 rounded-xl border border-line bg-panel focus-within:border-ember transition-colors overflow-hidden">
+              <span className="pl-4 text-ink-ghost text-sm select-none">cookbookverse.com/chef/</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                placeholder="yourname"
+                className="flex-1 px-2 py-3 bg-transparent text-ink placeholder:text-ink-ghost focus:outline-none text-sm"
+              />
+            </div>
+            {username && (
+              <p className="text-xs text-ink-ghost mt-2">
+                Your public profile: <a href={`/chef/${username}`} className="text-ember hover:underline">/chef/{username}</a>
+              </p>
+            )}
           </div>
 
           {/* Bio */}
