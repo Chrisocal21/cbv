@@ -6,53 +6,62 @@ type Group = { group: string; items: string[] }
 
 export function GroceryListClient({
   groups,
-  allItems,
 }: {
   groups: Group[]
   allItems: string[]
 }) {
+  // Build a flat list of { key, text } — keyed by position so duplicate ingredient
+  // names across different groups are each independently checkable.
+  const allRows = groups.flatMap((g, gi) =>
+    g.items.map((item, ii) => ({ key: `${gi}-${ii}`, text: item }))
+  )
+
   const [checked, setChecked] = useState<Set<string>>(new Set())
+
   const [copied, setCopied] = useState(false)
 
-  // Deduplicate items so Set comparisons work correctly
-  const uniqueItems = Array.from(new Set(allItems))
-
-  const toggle = (item: string) => {
+  const toggle = (key: string) => {
     setChecked((prev) => {
       const next = new Set(prev)
-      next.has(item) ? next.delete(item) : next.add(item)
+      next.has(key) ? next.delete(key) : next.add(key)
       return next
     })
   }
 
-  const unchecked = uniqueItems.filter((i) => !checked.has(i))
+  const uncheckedRows = allRows.filter((r) => !checked.has(r.key))
 
   const copy = async () => {
-    const text = unchecked.join('\n')
+    const text = uncheckedRows.map((r) => r.text).join('\n')
     await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const allKeys = allRows.map((r) => r.key)
+  const allChecked = checked.size === allKeys.length
+  const noneChecked = checked.size === 0
 
   return (
     <div>
       {/* Actions */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-ink-ghost">
-          {unchecked.length} of {uniqueItems.length} remaining
+          {uncheckedRows.length} of {allRows.length} remaining
         </p>
         <div className="flex gap-3 items-center">
           <button
-            onClick={() => setChecked(new Set(uniqueItems))}
-            disabled={checked.size === uniqueItems.length}
+            type="button"
+            onClick={() => setChecked(new Set(allKeys))}
+            disabled={allChecked}
             className="text-xs text-ink-ghost hover:text-ink transition-colors disabled:opacity-30"
           >
             Check all
           </button>
           <span className="text-line">·</span>
           <button
+            type="button"
             onClick={() => setChecked(new Set())}
-            disabled={checked.size === 0}
+            disabled={noneChecked}
             className="text-xs text-ink-ghost hover:text-ink transition-colors disabled:opacity-30"
           >
             Clear
@@ -85,32 +94,35 @@ export function GroceryListClient({
 
       {/* Ingredient groups */}
       <div className="space-y-8">
-        {groups.map(({ group, items }) => (
+        {groups.map(({ group, items }, gi) => (
           <div key={group}>
             <h2 className="font-display text-sm font-bold text-ink-ghost uppercase tracking-widest mb-3">
               {group || 'Ingredients'}
             </h2>
             <ul className="space-y-2">
-              {items.map((item) => (
-                <li key={item}>
-                  <label className={`flex items-start gap-3 cursor-pointer group ${checked.has(item) ? 'opacity-40' : ''}`}>
-                    <span className={`mt-0.5 w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${checked.has(item) ? 'bg-ember border-ember' : 'border-line group-hover:border-ember'}`}>
-                      {checked.has(item) && (
+              {items.map((item, ii) => {
+                const key = `${gi}-${ii}`
+                return (
+                <li key={key}>
+                  <label className={`flex items-start gap-3 cursor-pointer group ${checked.has(key) ? 'opacity-40' : ''}`}>
+                    <span className={`mt-0.5 w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${checked.has(key) ? 'bg-ember border-ember' : 'border-line group-hover:border-ember'}`}>
+                      {checked.has(key) && (
                         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                       )}
                     </span>
                     <input
                       type="checkbox"
                       className="sr-only"
-                      checked={checked.has(item)}
-                      onChange={() => toggle(item)}
+                      checked={checked.has(key)}
+                      onChange={() => toggle(key)}
                     />
-                    <span className={`text-sm leading-relaxed ${checked.has(item) ? 'line-through text-ink-ghost' : 'text-ink'}`}>
+                    <span className={`text-sm leading-relaxed ${checked.has(key) ? 'line-through text-ink-ghost' : 'text-ink'}`}>
                       {item}
                     </span>
                   </label>
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </div>
         ))}
