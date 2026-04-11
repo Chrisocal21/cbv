@@ -189,3 +189,21 @@ export async function getPublicCollectionsByUser(userId: string) {
   const rows = await db.select().from(userCollections).where(eq(userCollections.userId, userId))
   return rows
 }
+
+/** Total times a specific recipe has been logged as cooked */
+export async function getRecipeCookCount(recipeId: string): Promise<number> {
+  const rows = await db
+    .select({ total: count() })
+    .from(cookedLog)
+    .where(eq(cookedLog.recipeId, recipeId))
+  return rows[0]?.total ?? 0
+}
+
+/** Published variations of a recipe (recipes where parentId = recipeId) */
+export async function getRecipeVariations(recipeId: string): Promise<RecipeRow[]> {
+  return db
+    .select()
+    .from(recipes)
+    .where(and(eq(recipes.parentId, recipeId), eq(recipes.status, 'published')))
+    .orderBy(desc(recipes.publishedAt))
+}

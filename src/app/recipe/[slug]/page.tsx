@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
-import { getAllRecipes, getRecipeBySlug, getUserProfile } from '@/lib/queries'
+import { getAllRecipes, getRecipeBySlug, getUserProfile, getRecipeCookCount, getRecipeVariations } from '@/lib/queries'
 import { db } from '@/lib/db'
 import { recipes as recipesTable } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
@@ -69,9 +69,11 @@ export default async function RecipePage({
       .catch(() => {}) // non-blocking, ignore errors
   }
 
-  const [allRecipes, profile] = await Promise.all([
+  const [allRecipes, profile, cookCount, variations] = await Promise.all([
     getAllRecipes(),
     userId ? getUserProfile(userId) : null,
+    recipe.status === 'published' ? getRecipeCookCount(recipe.id) : Promise.resolve(0),
+    recipe.status === 'published' ? getRecipeVariations(recipe.id) : Promise.resolve([]),
   ])
   const related = allRecipes
     .filter((r) => r.id !== recipe.id && r.status === 'published' && (r.collection === recipe.collection || r.cuisine === recipe.cuisine))
@@ -136,11 +138,34 @@ export default async function RecipePage({
           <p className="text-base text-ink-dim leading-relaxed max-w-2xl">{recipe.description}</p>
 
           {/* Popularity */}
-          {recipe.saveCount > 0 && (
-            <p className="text-sm text-ink-ghost mt-3">
-              <span className="text-ember">♥</span> {recipe.saveCount.toLocaleString()} {recipe.saveCount === 1 ? 'person has' : 'people have'} saved this
-            </p>
-          )}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3">
+            {recipe.saveCount > 0 && (
+              <span className="flex items-center gap-1.5 text-sm text-ink-ghost">
+                <svg className="w-3.5 h-3.5 text-ember" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+                {recipe.saveCount.toLocaleString()} {recipe.saveCount === 1 ? 'person has' : 'people have'} saved this
+              </span>
+            )}
+            {cookCount > 0 && (
+              <span className="flex items-center gap-1.5 text-sm text-ink-ghost">
+                <svg className="w-3.5 h-3.5 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 10.608v2.513M15 19.128v-.003c0-1.113-.425-2.188-1.184-2.995a3.75 3.75 0 00-2.816-1.253 3.75 3.75 0 00-2.816 1.253C7.425 16.94 7 18.015 7 19.128v.003" /></svg>
+                {cookCount.toLocaleString()} {cookCount === 1 ? 'person has' : 'people have'} cooked this
+              </span>
+            )}
+          </div>
+
+          {/* Variation of parent */}
+          {recipe.isVariation && recipe.parentId && (() => {
+            const parent = allRecipes.find((r) => r.id === recipe.parentId)
+            if (!parent) return null
+            return (
+              <p className="text-sm text-ink-ghost mt-3">
+                Variation of{' '}
+                <Link href={`/recipe/${parent.slug}`} className="text-ink hover:text-ember transition-colors font-medium">
+                  {parent.title}
+                </Link>
+              </p>
+            )
+          })()}
 
           {/* Staff attribution */}
           {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
@@ -200,7 +225,8 @@ export default async function RecipePage({
                 href={`/recipe/${recipe.slug}/edit`}
                 className="inline-flex items-center gap-2 text-xs text-ink-dim hover:text-ember border border-line hover:border-ember px-4 py-2 rounded-full transition-colors"
               >
-                ✏️ Edit recipe
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                Edit recipe
               </a>
             )}
             {userId && recipe.status === 'published' && (
@@ -251,6 +277,39 @@ export default async function RecipePage({
 
         {/* Nutrition */}
         <NutritionPanel nutrition={recipe.nutrition} />
+
+        {/* Variations */}
+        {variations.length > 0 && (
+          <div className="py-10 border-b border-line">
+            <h2 className="font-display text-2xl font-bold text-ink mb-1">
+              {variations.length} {variations.length === 1 ? 'variation' : 'variations'} of this recipe
+            </h2>
+            <p className="text-sm text-ink-ghost mb-6">Community riffs on the original</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {variations.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/recipe/${r.slug}`}
+                  className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
+                >
+                  <div className={`aspect-video overflow-hidden relative ${!r.imageUrl ? `bg-gradient-to-br ${r.gradient}` : ''}`}>
+                    {r.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrl} alt={r.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs uppercase tracking-wide text-ink-ghost mb-1">{r.cuisine}</p>
+                    <h3 className="font-display font-bold text-ink group-hover:text-ember transition-colors leading-snug text-sm">
+                      {r.title}
+                    </h3>
+                    <p className="text-xs text-ink-ghost mt-1">{r.totalTime} &middot; {r.difficulty}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* You might also like */}
         {related.length > 0 && (
