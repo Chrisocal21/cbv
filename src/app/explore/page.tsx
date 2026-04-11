@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; collection?: string; dietary?: string; mood?: string; difficulty?: string }>
+  searchParams: Promise<{ search?: string; collection?: string; dietary?: string; mood?: string; difficulty?: string; cuisine?: string }>
 }) {
   const [recipes, trending] = await Promise.all([getAllRecipes(), getTrendingRecipes(6)])
   const params = await searchParams
@@ -18,6 +18,7 @@ export default async function ExplorePage({
     dietary: params.dietary ?? 'all',
     mood: params.mood ?? 'all',
     difficulty: params.difficulty ?? 'all',
+    cuisine: params.cuisine ?? 'all',
   }
 
   return (

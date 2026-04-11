@@ -12,6 +12,7 @@ type FilterState = {
   difficulty: string
   dietary: string
   mood: string
+  cuisine: string
   search: string
 }
 
@@ -30,6 +31,7 @@ export function ExploreFilters({
     difficulty: 'all',
     dietary: 'all',
     mood: 'all',
+    cuisine: 'all',
     search: '',
     ...initialFilters,
   })
@@ -40,6 +42,7 @@ export function ExploreFilters({
       if (filters.difficulty !== 'all' && r.difficulty !== filters.difficulty) return false
       if (filters.dietary !== 'all' && !(r.dietaryTags as string[]).includes(filters.dietary)) return false
       if (filters.mood !== 'all' && !r.moodTags.some((t) => t.toLowerCase() === filters.mood.toLowerCase())) return false
+      if (filters.cuisine !== 'all' && r.cuisine !== filters.cuisine) return false
       if (filters.search) {
         const q = filters.search.toLowerCase()
         const ingredientMatch = (r.ingredients as { group: string; items: string[] }[])
@@ -68,6 +71,7 @@ export function ExploreFilters({
     if (next.difficulty !== 'all') params.set('difficulty', next.difficulty)
     if (next.dietary !== 'all') params.set('dietary', next.dietary)
     if (next.mood !== 'all') params.set('mood', next.mood)
+    if (next.cuisine !== 'all') params.set('cuisine', next.cuisine)
     const qs = params.toString()
     router.replace(`${pathname}${qs ? '?' + qs : ''}`, { scroll: false })
   }, [router, pathname])
@@ -97,6 +101,12 @@ export function ExploreFilters({
     return Array.from(seen).sort()
   }, [recipes])
 
+  const cuisines = useMemo(() => {
+    const seen = new Set<string>()
+    for (const r of recipes) if (r.cuisine) seen.add(r.cuisine)
+    return Array.from(seen).sort()
+  }, [recipes])
+
   const [page, setPage] = useState(1)
   // Reset page when filters change
   const visibleCount = page * PAGE_SIZE
@@ -109,14 +119,24 @@ export function ExploreFilters({
   return (
     <div>
       {/* Search */}
-      <div className="mb-6">
+      <div className="mb-8 relative">
+        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ink-ghost pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" /></svg>
         <input
           type="text"
-          placeholder="Search recipes, cuisines, ingredients..."
+          placeholder="Search by name, cuisine, ingredient&hellip;"
           value={filters.search}
           onChange={(e) => set('search', e.target.value)}
-          className="w-full md:max-w-md px-4 py-3 rounded-xl border border-line bg-panel text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors text-sm"
+          className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-line bg-panel text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors text-sm"
         />
+        {filters.search && (
+          <button
+            onClick={() => set('search', '')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-ghost hover:text-ink transition-colors"
+            aria-label="Clear search"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -132,7 +152,7 @@ export function ExploreFilters({
           </div>
         </div>
 
-        {/* Row 2: Difficulty + Dietary + Mood — compact selects */}
+        {/* Row 2: Difficulty + Dietary + Mood + Cuisine — compact selects */}
         <div className="flex flex-wrap gap-3 items-end">
           <FilterSelect
             label="Difficulty"
@@ -146,6 +166,14 @@ export function ExploreFilters({
             onChange={(v) => set('dietary', v)}
             options={[{ value: 'all', label: 'Any diet' }, ...DIETARY.map((d) => ({ value: d, label: d }))]}
           />
+          {cuisines.length > 0 && (
+            <FilterSelect
+              label="Cuisine"
+              value={filters.cuisine}
+              onChange={(v) => set('cuisine', v)}
+              options={[{ value: 'all', label: 'Any cuisine' }, ...cuisines.map((c) => ({ value: c, label: c }))]}
+            />
+          )}
           {allMoodTags.length > 0 && (
             <FilterSelect
               label="Mood"
@@ -167,7 +195,7 @@ export function ExploreFilters({
             <p className="text-lg font-display">No recipes match those filters.</p>
             <button
               onClick={() => {
-                const cleared = { collection: 'all', difficulty: 'all', dietary: 'all', mood: 'all', search: '' }
+                const cleared = { collection: 'all', difficulty: 'all', dietary: 'all', mood: 'all', cuisine: 'all', search: '' }
                 setFilters(cleared)
                 router.replace(pathname, { scroll: false })
               }}
@@ -212,7 +240,10 @@ export function ExploreFilters({
                         {recipe.saveCount > 0 && (
                           <>
                             <span className="w-1 h-1 rounded-full bg-line" />
-                            <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
+                            <span className="flex items-center gap-1">
+                              <svg className="w-3 h-3 text-ember" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+                              {recipe.saveCount}
+                            </span>
                           </>
                         )}
                       </div>
