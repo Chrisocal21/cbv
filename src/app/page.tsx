@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
-import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile } from '@/lib/queries'
+import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile, getUserCookedRecipeIds } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const { userId } = await auth()
-  const [featured, allRecipes, dbCollections, profile] = await Promise.all([
+  const [featured, allRecipes, dbCollections, profile, cookedRecipeIds] = await Promise.all([
     getFeaturedRecipe(),
     getAllRecipes(),
     getCollectionsWithSpotlight(),
     userId ? getUserProfile(userId) : null,
+    userId ? getUserCookedRecipeIds(userId) : Promise.resolve([] as string[]),
   ])
 
   // New additions — most recent 3 published recipes (excluding featured)
@@ -20,40 +21,57 @@ export default async function HomePage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3)
 
-  // Personalised picks — only compute when user has saved recipes
+  // Personalised picks — uses saved + cooked history + dietary prefs
   const savedIds = new Set(profile?.savedRecipes ?? [])
+  const cookedIds = new Set(cookedRecipeIds)
   const dietaryPrefs = (profile?.dietaryPreferences as string[] | null) ?? []
+
   const personalisedRecipes = (() => {
-    if (!userId || savedIds.size === 0) return []
+    if (!userId || (savedIds.size === 0 && cookedIds.size === 0 && dietaryPrefs.length === 0)) return []
+
     const savedRecipes = allRecipes.filter((r) => savedIds.has(r.id))
-    // Build preference vectors from saved recipes
+    const cookedRecipes = allRecipes.filter((r) => cookedIds.has(r.id))
+
+    // Build preference vectors — cooked carries more weight than saved
     const favCuisines = new Map<string, number>()
     const favCollections = new Map<string, number>()
     const favMoods = new Map<string, number>()
     for (const r of savedRecipes) {
       favCuisines.set(r.cuisine, (favCuisines.get(r.cuisine) ?? 0) + 1)
       favCollections.set(r.collection, (favCollections.get(r.collection) ?? 0) + 1)
+      for (const t of r.moodTags as string[]) favMoods.set(t, (favMoods.get(t) ?? 0) + 0.5)
+    }
+    for (const r of cookedRecipes) {
+      favCuisines.set(r.cuisine, (favCuisines.get(r.cuisine) ?? 0) + 2)
+      favCollections.set(r.collection, (favCollections.get(r.collection) ?? 0) + 2)
       for (const t of r.moodTags as string[]) favMoods.set(t, (favMoods.get(t) ?? 0) + 1)
     }
-    // Score unsaved published recipes
+
+    const alreadySeen = new Set([...savedIds, ...cookedIds])
+
     return allRecipes
-      .filter((r) => r.status === 'published' && !savedIds.has(r.id) && r.id !== featured?.id)
+      .filter((r) => r.status === 'published' && !alreadySeen.has(r.id) && r.id !== featured?.id)
       .map((r) => {
         let score = 0
-        score += (favCuisines.get(r.cuisine) ?? 0) * 3
+        const reasons: string[] = []
+
+        const cuisineScore = (favCuisines.get(r.cuisine) ?? 0) * 3
+        if (cuisineScore > 0) { score += cuisineScore; reasons.push(r.cuisine) }
         score += (favCollections.get(r.collection) ?? 0) * 2
         for (const t of r.moodTags as string[]) score += (favMoods.get(t) ?? 0)
-        // Dietary preference boost
+
         if (dietaryPrefs.length > 0) {
           const tags = r.dietaryTags as string[]
-          if (dietaryPrefs.some((p) => tags.includes(p))) score += 2
+          const matches = dietaryPrefs.filter((p) => tags.includes(p))
+          if (matches.length > 0) { score += 3; reasons.push(...matches) }
         }
-        return { recipe: r, score }
+
+        const reason = reasons.slice(0, 2).join(' · ')
+        return { recipe: r, score, reason }
       })
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 4)
-      .map((x) => x.recipe)
   })()
 
   return (
@@ -144,20 +162,20 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Picked for you — Phase 3: personalised recs */}
+        {/* Picked for you */}
         {personalisedRecipes.length > 0 && (
           <section className="mx-auto max-w-7xl px-6 mb-20">
             <div className="flex items-baseline justify-between mb-6">
               <div>
                 <h2 className="font-display text-2xl font-bold text-ink">Picked for you</h2>
-                <p className="text-sm text-ink-ghost mt-1">Based on what you&rsquo;ve been saving</p>
+                <p className="text-sm text-ink-ghost mt-1">Based on your taste</p>
               </div>
               <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">
                 See all
               </a>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {personalisedRecipes.map((recipe) => (
+              {personalisedRecipes.map(({ recipe, reason }) => (
                 <a
                   key={recipe.id}
                   href={`/recipe/${recipe.slug}`}
@@ -175,10 +193,20 @@ export default async function HomePage() {
                     <h3 className="font-display text-base font-bold text-ink group-hover:text-ember transition-colors leading-snug">
                       {recipe.title}
                     </h3>
-                    <p className="text-xs text-ink-ghost mt-2">
-                      {recipe.totalTime} · {recipe.difficulty}
-                      {recipe.saveCount > 0 && <span> · <span className="text-ember">♥</span> {recipe.saveCount}</span>}
-                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-ink-ghost">
+                        {recipe.totalTime} · {recipe.difficulty}
+                      </p>
+                      {recipe.saveCount > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-ink-ghost">
+                          <svg className="w-3 h-3 text-ember" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+                          {recipe.saveCount}
+                        </span>
+                      )}
+                    </div>
+                    {reason && (
+                      <p className="text-xs text-ember/80 mt-1.5 capitalize">{reason}</p>
+                    )}
                   </div>
                 </a>
               ))}
@@ -219,17 +247,20 @@ export default async function HomePage() {
                   <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                     {recipe.description}
                   </p>
-                  <div className="flex items-center gap-3 text-xs text-ink-ghost">
-                    <span>{recipe.totalTime}</span>
-                    <span className="w-1 h-1 rounded-full bg-line" />
-                    <span>{recipe.difficulty}</span>
-                    {recipe.saveCount > 0 && (
-                      <>
-                        <span className="w-1 h-1 rounded-full bg-line" />
-                        <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
-                      </>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-3 text-xs text-ink-ghost">
+                      <span>{recipe.totalTime}</span>
+                      <span className="w-1 h-1 rounded-full bg-line" />
+                      <span>{recipe.difficulty}</span>
+                      {recipe.saveCount > 0 && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-line" />
+                          <span className="flex items-center gap-1">
+                            <svg className="w-3 h-3 text-ember" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+                            {recipe.saveCount}
+                          </span>
+                        </>
+                      )}
+                    </div>
                 </div>
               </a>
             ))}

@@ -97,6 +97,15 @@ export async function getRecipesByIds(recipeIds: string[]): Promise<RecipeRow[]>
   return db.select().from(recipes).where(inArray(recipes.id, recipeIds))
 }
 
+/** Distinct recipe IDs this user has ever logged as cooked — used for personalisation */
+export async function getUserCookedRecipeIds(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ recipeId: cookedLog.recipeId })
+    .from(cookedLog)
+    .where(eq(cookedLog.userId, userId))
+  return [...new Set(rows.map((r) => r.recipeId))]
+}
+
 /** Submissions for recipes authored by this user */
 export async function getUserSubmissions(userId: string): Promise<(SubmissionRow & { recipe: RecipeRow })[]> {
   const rows = await db.select().from(submissions).where(eq(submissions.submittedBy, userId))
