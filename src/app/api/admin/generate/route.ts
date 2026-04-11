@@ -2,7 +2,8 @@ import OpenAI from 'openai'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { recipes, submissions, users } from '@/lib/db/schema'
+import { recipes, submissions, users, staffActivity } from '@/lib/db/schema'
+import { isStaffPersona } from '@/lib/staff'
 import { eq } from 'drizzle-orm'
 import { runCourtReview } from '@/lib/court-review'
 import { randomUUID } from 'crypto'
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
   // Admin-generated recipes always belong to the platform (authorId: null).
   // The attributeTo toggle controls display credit only, not recipe ownership.
   const authorId = null
+  const staffAuthor = isStaffPersona(attributeTo) ? attributeTo : null
 
   // Step 1: Generate recipe
   const gradientOptions = GRADIENTS.join(' | ')
@@ -131,6 +133,7 @@ export async function POST(req: NextRequest) {
     status: 'pending_review',
     aiGenerated: true,
     authorId: null,
+    staffAuthor,
     isFeatured: false,
   })
 
@@ -156,6 +159,21 @@ export async function POST(req: NextRequest) {
     recommendedAction: report.synthesis.recommendedAction === 'approve' ? 'pass' : report.synthesis.recommendedAction === 'reject' ? 'reject' : 'flag',
     adminReviewed: false,
   })
+
+  // Step 5: Log to staff activity
+  const usage = generation.usage
+  if (staffAuthor) {
+    await db.insert(staffActivity).values({
+      id: randomUUID(),
+      persona: staffAuthor,
+      actionType: 'generate',
+      recipeId,
+      tokensInput: usage?.prompt_tokens ?? 0,
+      tokensOutput: usage?.completion_tokens ?? 0,
+      outcome: 'created',
+      notes: `"${recipeData.title}" · confidence ${report.synthesis.confidenceScore}`,
+    })
+  }
 
   return NextResponse.json({
     recipe: { ...recipeData, id: recipeId, slug },

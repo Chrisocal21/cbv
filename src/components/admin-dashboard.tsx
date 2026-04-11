@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
 type Verdict = 'pass' | 'flag' | 'reject' | null
 
@@ -31,6 +32,7 @@ type SubmissionRow = {
     totalTime: string
     servings: string
     authorId: string | null
+    staffAuthor: string | null
   }
 }
 
@@ -164,6 +166,11 @@ export function AdminDashboard() {
                 <div className="flex items-center gap-3 mb-1">
                   <h3 className="font-display font-bold text-ink text-lg">{recipe.title}</h3>
                   <ScoreRing score={sub.confidenceScore} />
+                  {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded border bg-amber-500/10 text-amber-400 border-amber-500/30">
+                      by {STAFF_PERSONAS[recipe.staffAuthor].name}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-ink-dim">
                   {recipe.collection} &middot; {recipe.cuisine} &middot; {recipe.difficulty}

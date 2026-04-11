@@ -64,6 +64,7 @@ export const recipes = pgTable('recipes', {
   saveCount: integer('save_count').notNull().default(0),
   parentId: text('parent_id'),
   isVariation: boolean('is_variation').notNull().default(false),
+  staffAuthor: text('staff_author'), // 'marco' | 'celeste' | 'nadia' | null
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   publishedAt: timestamp('published_at'),
@@ -148,11 +149,41 @@ export const cookedLog = pgTable('cooked_log', {
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
-  type: text('type').notNull(), // 'recipe_published' | 'recipe_saved'
+  type: text('type').notNull(),
   message: text('message').notNull(),
   recipeId: text('recipe_id'),
   recipeSlug: text('recipe_slug'),
   read: boolean('read').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// ─── Staff Activity Log ───────────────────────────────────────────────────────
+
+export const staffActivity = pgTable('staff_activity', {
+  id: text('id').primaryKey(),
+  persona: text('persona').notNull(), // 'marco' | 'celeste' | 'nadia' | 'theo' | 'ellis' | 'rex'
+  actionType: text('action_type').notNull(), // 'generate' | 'review' | 'dietary_check' | 'qa' | 'digest'
+  recipeId: text('recipe_id'),
+  tokensInput: integer('tokens_input').notNull().default(0),
+  tokensOutput: integer('tokens_output').notNull().default(0),
+  outcome: text('outcome').notNull(), // 'created' | 'pass' | 'flag' | 'reject'
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// ─── Platform Settings ────────────────────────────────────────────────────────
+
+export const platformSettings = pgTable('platform_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+// ─── Prompt Templates ─────────────────────────────────────────────────────────
+
+export const promptTemplates = pgTable('prompt_templates', {
+  persona: text('persona').primaryKey(), // 'marco' | 'celeste' | 'nadia'
+  systemPrompt: text('system_prompt').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 

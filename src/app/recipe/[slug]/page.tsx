@@ -10,6 +10,7 @@ import { NutritionPanel } from '@/components/nutrition-panel'
 import { VariationButton } from '@/components/variation-button'
 import { IngredientsPanel } from '@/components/ingredients-panel'
 import { CookedItButton } from '@/components/cooked-it-button'
+import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
 import type { Metadata } from 'next'
 
@@ -108,7 +109,11 @@ export default async function RecipePage({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover opacity-90" />
         )}
-        {recipe.aiGenerated && (
+        {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) ? (
+          <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
+            By {STAFF_PERSONAS[recipe.staffAuthor].name} · Cookbookverse Kitchen
+          </span>
+        ) : recipe.aiGenerated && (
           <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
             AI Generated
           </span>
@@ -133,6 +138,15 @@ export default async function RecipePage({
           {recipe.saveCount > 0 && (
             <p className="text-sm text-ink-ghost mt-3">
               <span className="text-ember">♥</span> {recipe.saveCount.toLocaleString()} {recipe.saveCount === 1 ? 'person has' : 'people have'} saved this
+            </p>
+          )}
+
+          {/* Staff attribution */}
+          {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
+            <p className="text-sm text-ink-ghost mt-3">
+              A recipe by{' '}
+              <span className="text-ink font-medium">{STAFF_PERSONAS[recipe.staffAuthor].name}</span>
+              {' '}· {STAFF_PERSONAS[recipe.staffAuthor].role} · Cookbookverse Kitchen
             </p>
           )}
 

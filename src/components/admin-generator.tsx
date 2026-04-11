@@ -4,7 +4,13 @@ import { useState, useRef, useEffect } from 'react'
 
 type Verdict = 'pass' | 'flag' | 'reject'
 type RecommendedAction = 'approve' | 'revise' | 'reject'
-type Attribution = 'cookbookverse' | 'user'
+type Attribution = 'cookbookverse' | 'marco' | 'celeste' | 'nadia' | 'user'
+
+const STAFF_OPTS: { value: Attribution; label: string; sub: string }[] = [
+  { value: 'marco',   label: 'Marco',    sub: 'Executive Chef' },
+  { value: 'celeste', label: 'Céleste',  sub: 'Pastry & Baking' },
+  { value: 'nadia',   label: 'Nadia',    sub: 'Dietary & Wellness' },
+]
 
 type JudgeResult = { verdict: Verdict; notes: string; issues: string[] }
 
@@ -358,11 +364,22 @@ export function AdminGenerator() {
             {/* Attribution toggle */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-2">
-                Publish as
+                Created by
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {STAFF_OPTS.map(({ value, label, sub }) => (
+                  <button key={value} onClick={() => setAttribution(value)}
+                    className={`flex flex-col px-4 py-2.5 rounded-lg text-sm border transition-colors ${
+                      attribution === value
+                        ? 'bg-ember text-white border-ember'
+                        : 'bg-page text-ink-dim border-line hover:border-ember hover:text-ink'
+                    }`}>
+                    <span className="font-medium leading-tight">{label}</span>
+                    <span className={`text-xs leading-tight ${attribution === value ? 'text-white/70' : 'text-ink-ghost'}`}>{sub}</span>
+                  </button>
+                ))}
                 <button onClick={() => setAttribution('cookbookverse')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors self-center ${
                     attribution === 'cookbookverse'
                       ? 'bg-ember text-white border-ember'
                       : 'bg-page text-ink-dim border-line hover:border-ember hover:text-ink'
@@ -370,7 +387,7 @@ export function AdminGenerator() {
                   Cookbookverse
                 </button>
                 <button onClick={() => setAttribution('user')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors self-center ${
                     attribution === 'user'
                       ? 'bg-ember text-white border-ember'
                       : 'bg-page text-ink-dim border-line hover:border-ember hover:text-ink'

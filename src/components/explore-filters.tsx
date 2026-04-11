@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import type { RecipeRow } from '@/lib/queries'
+import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
 const PAGE_SIZE = 12
 
@@ -197,6 +198,9 @@ export function ExploreFilters({
                     <h3 className="font-display text-lg font-bold text-ink group-hover:text-ember transition-colors leading-snug mb-2">
                       {recipe.title}
                     </h3>
+                    {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
+                      <p className="text-xs text-ink-ghost mb-2">by {STAFF_PERSONAS[recipe.staffAuthor].name}</p>
+                    )}
                     <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                       {recipe.description}
                     </p>

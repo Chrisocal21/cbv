@@ -9,6 +9,10 @@ import { AdminDashboard } from '@/components/admin-dashboard'
 import { AdminGenerator } from '@/components/admin-generator'
 import { AdminPublishedRecipes } from '@/components/admin-published-recipes'
 import { AdminCollections } from '@/components/admin-collections'
+import { EllisDashboard } from '@/components/ellis-dashboard'
+import { AdminSettings } from '@/components/admin-settings'
+import { RexMonitor } from '@/components/rex-monitor'
+import { PromptTuner } from '@/components/prompt-tuner'
 
 export default async function AdminPage() {
   const { userId } = await auth()
@@ -48,6 +52,14 @@ export default async function AdminPage() {
             Generate and publish recipes. Review pending submissions.
           </p>
         </div>
+
+        <EllisDashboard />
+
+        <RexMonitor />
+
+        <AdminSettings />
+
+        <PromptTuner />
 
         <AdminGenerator />
 

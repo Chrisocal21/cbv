@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getCollectionBySlug, getRecipesByCollection } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
+import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,6 +70,9 @@ export default async function CollectionPage({
                   <h3 className="font-display text-lg font-bold text-ink group-hover:text-ember transition-colors leading-snug mb-2">
                     {recipe.title}
                   </h3>
+                  {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
+                    <p className="text-xs text-ink-ghost mb-2">by {STAFF_PERSONAS[recipe.staffAuthor].name}</p>
+                  )}
                   <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                     {recipe.description}
                   </p>
