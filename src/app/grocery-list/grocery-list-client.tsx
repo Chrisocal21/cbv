@@ -14,6 +14,9 @@ export function GroceryListClient({
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
 
+  // Deduplicate items so Set comparisons work correctly
+  const uniqueItems = Array.from(new Set(allItems))
+
   const toggle = (item: string) => {
     setChecked((prev) => {
       const next = new Set(prev)
@@ -22,7 +25,7 @@ export function GroceryListClient({
     })
   }
 
-  const unchecked = allItems.filter((i) => !checked.has(i))
+  const unchecked = uniqueItems.filter((i) => !checked.has(i))
 
   const copy = async () => {
     const text = unchecked.join('\n')
@@ -36,12 +39,12 @@ export function GroceryListClient({
       {/* Actions */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-ink-ghost">
-          {unchecked.length} of {allItems.length} remaining
+          {unchecked.length} of {uniqueItems.length} remaining
         </p>
         <div className="flex gap-3 items-center">
           <button
-            onClick={() => setChecked(new Set(allItems))}
-            disabled={checked.size === allItems.length}
+            onClick={() => setChecked(new Set(uniqueItems))}
+            disabled={checked.size === uniqueItems.length}
             className="text-xs text-ink-ghost hover:text-ink transition-colors disabled:opacity-30"
           >
             Check all
