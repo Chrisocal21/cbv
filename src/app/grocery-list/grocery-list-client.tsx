@@ -38,15 +38,22 @@ export function GroceryListClient({
         <p className="text-sm text-ink-ghost">
           {unchecked.length} of {allItems.length} remaining
         </p>
-        <div className="flex gap-3">
-          {checked.size > 0 && (
-            <button
-              onClick={() => setChecked(new Set())}
-              className="text-xs text-ink-ghost hover:text-ink transition-colors"
-            >
-              Uncheck all
-            </button>
-          )}
+        <div className="flex gap-3 items-center">
+          <button
+            onClick={() => setChecked(new Set(allItems))}
+            disabled={checked.size === allItems.length}
+            className="text-xs text-ink-ghost hover:text-ink transition-colors disabled:opacity-30"
+          >
+            Check all
+          </button>
+          <span className="text-line">·</span>
+          <button
+            onClick={() => setChecked(new Set())}
+            disabled={checked.size === 0}
+            className="text-xs text-ink-ghost hover:text-ink transition-colors disabled:opacity-30"
+          >
+            Clear
+          </button>
           <button
             onClick={copy}
             className="inline-flex items-center gap-2 text-xs font-medium border border-line hover:border-ember text-ink-dim hover:text-ink px-4 py-2 rounded-full transition-colors"
