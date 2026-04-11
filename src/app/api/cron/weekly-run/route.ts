@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto'
 // Secured by CRON_SECRET header set in Vercel env
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  const expected = `Bearer ${process.env.CRON_SECRET}`
+  const expected = `Bearer ${process.env.CRON_SECRET?.trim()}`
   if (!process.env.CRON_SECRET || authHeader !== expected) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
