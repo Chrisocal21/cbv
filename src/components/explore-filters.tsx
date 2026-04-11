@@ -199,7 +199,7 @@ export function ExploreFilters({
                       {recipe.title}
                     </h3>
                     {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
-                      <p className="text-xs text-ink-ghost mb-2">by {STAFF_PERSONAS[recipe.staffAuthor].name}</p>
+                      <a href={`/chef/${recipe.staffAuthor}`} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">by {STAFF_PERSONAS[recipe.staffAuthor].name}</a>
                     )}
                     <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                       {recipe.description}

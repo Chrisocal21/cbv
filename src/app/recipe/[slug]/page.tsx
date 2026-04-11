@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
 import { getAllRecipes, getRecipeBySlug, getUserProfile } from '@/lib/queries'
 import { db } from '@/lib/db'
@@ -110,9 +111,9 @@ export default async function RecipePage({
           <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover opacity-90" />
         )}
         {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) ? (
-          <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
+          <Link href={`/chef/${recipe.staffAuthor}`} className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors">
             By {STAFF_PERSONAS[recipe.staffAuthor].name} · Cookbookverse Kitchen
-          </span>
+          </Link>
         ) : recipe.aiGenerated && (
           <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
             AI Generated
@@ -145,7 +146,9 @@ export default async function RecipePage({
           {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
             <p className="text-sm text-ink-ghost mt-3">
               A recipe by{' '}
-              <span className="text-ink font-medium">{STAFF_PERSONAS[recipe.staffAuthor].name}</span>
+              <Link href={`/chef/${recipe.staffAuthor}`} className="text-ink font-medium hover:text-ember transition-colors">
+                {STAFF_PERSONAS[recipe.staffAuthor].name}
+              </Link>
               {' '}· {STAFF_PERSONAS[recipe.staffAuthor].role} · Cookbookverse Kitchen
             </p>
           )}

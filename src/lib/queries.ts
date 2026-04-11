@@ -141,3 +141,29 @@ export async function getTrendingRecipes(limit = 6): Promise<RecipeRow[]> {
     .orderBy(desc(recipes.saveCount))
     .limit(limit)
 }
+
+// ─── Public chef profiles ─────────────────────────────────────────────────────
+
+/** Published recipes by a real user (by their Clerk userId) */
+export async function getPublishedRecipesByUser(userId: string): Promise<RecipeRow[]> {
+  return db
+    .select()
+    .from(recipes)
+    .where(and(eq(recipes.authorId, userId), eq(recipes.status, 'published')))
+    .orderBy(desc(recipes.publishedAt))
+}
+
+/** Published recipes by a staff persona slug */
+export async function getPublishedRecipesByStaff(persona: string): Promise<RecipeRow[]> {
+  return db
+    .select()
+    .from(recipes)
+    .where(and(eq(recipes.staffAuthor, persona), eq(recipes.status, 'published')))
+    .orderBy(desc(recipes.publishedAt))
+}
+
+/** Look up a user by their username (for public profile URLs) */
+export async function getUserByUsername(username: string): Promise<UserRow | undefined> {
+  const rows = await db.select().from(users).where(eq(users.username, username)).limit(1)
+  return rows[0]
+}

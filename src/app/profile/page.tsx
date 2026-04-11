@@ -147,6 +147,9 @@ export default async function ProfilePage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="font-display text-2xl font-bold text-ink">{displayName}</h1>
+              <a href="/fridge" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1">
+                My fridge
+              </a>
               <a href="/settings" className="text-xs text-ink-ghost hover:text-ember transition-colors border border-line rounded-full px-3 py-1">
                 Edit profile
               </a>
