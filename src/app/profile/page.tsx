@@ -425,9 +425,21 @@ export default async function ProfilePage({
             {savedRecipes.length === 0 ? (
               <EmptyState icon={<svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" /></svg>} message="No saved recipes yet. Hit 'Save recipe' on any recipe page or in the AI Kitchen." />
             ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savedRecipes.map((r) => <RecipeCard key={r.id} recipe={r} />)}
-              </div>
+              <>
+                <div className="flex items-center justify-between mb-5">
+                  <p className="text-sm text-ink-ghost">{savedRecipes.length} {savedRecipes.length === 1 ? 'recipe' : 'recipes'}</p>
+                  <a
+                    href={`/grocery-list?recipes=${savedRecipes.map((r) => r.slug).join(',')}`}
+                    className="inline-flex items-center gap-2 text-xs font-medium border border-line hover:border-ember text-ink-dim hover:text-ink px-4 py-2 rounded-full transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                    Grocery list
+                  </a>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedRecipes.map((r) => <RecipeCard key={r.id} recipe={r} />)}
+                </div>
+              </>
             )}
           </div>
         )}

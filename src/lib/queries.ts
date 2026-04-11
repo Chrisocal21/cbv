@@ -97,6 +97,14 @@ export async function getRecipesByIds(recipeIds: string[]): Promise<RecipeRow[]>
   return db.select().from(recipes).where(inArray(recipes.id, recipeIds))
 }
 
+/** Fetch published recipes by slug array — used for grocery list generation */
+export async function getRecipesBySlugs(slugs: string[]): Promise<RecipeRow[]> {
+  if (slugs.length === 0) return []
+  return db.select().from(recipes).where(
+    and(inArray(recipes.slug, slugs), eq(recipes.status, 'published'))
+  )
+}
+
 /** Distinct recipe IDs this user has ever logged as cooked — used for personalisation */
 export async function getUserCookedRecipeIds(userId: string): Promise<string[]> {
   const rows = await db

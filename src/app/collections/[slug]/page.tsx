@@ -21,8 +21,12 @@ export default async function CollectionPage({
       <Navbar />
 
       {/* Collection hero */}
-      <div className={`w-full py-20 md:py-28 bg-gradient-to-br ${collection.gradient} relative`}>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+      <div className={`w-full py-20 md:py-28 relative overflow-hidden ${collection.imageUrl ? 'bg-black' : `bg-gradient-to-br ${collection.gradient}`}`}>
+        {collection.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={collection.imageUrl} alt={collection.name} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <div className="relative mx-auto max-w-7xl px-6">
           <p className="text-xs font-semibold tracking-[0.2em] uppercase text-white/70 mb-4">
             Collection
@@ -83,7 +87,10 @@ export default async function CollectionPage({
                     {recipe.saveCount > 0 && (
                       <>
                         <span className="w-1 h-1 rounded-full bg-line" />
-                        <span><span className="text-ember">♥</span> {recipe.saveCount}</span>
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3 h-3 text-ember" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" /></svg>
+                          {recipe.saveCount}
+                        </span>
                       </>
                     )}
                   </div>
