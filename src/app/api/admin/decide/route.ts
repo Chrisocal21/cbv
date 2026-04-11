@@ -54,15 +54,24 @@ export async function POST(req: NextRequest) {
     .where(eq(recipes.id, sub.recipeId))
 
   // Notify the submitter
-  if (decision === 'publish') {
-    const recipeRows = await db.select({ title: recipes.title, slug: recipes.slug }).from(recipes).where(eq(recipes.id, sub.recipeId)).limit(1)
-    const recipe = recipeRows[0]
-    if (recipe) {
+  const recipeRows = await db.select({ title: recipes.title, slug: recipes.slug }).from(recipes).where(eq(recipes.id, sub.recipeId)).limit(1)
+  const recipe = recipeRows[0]
+  if (recipe) {
+    if (decision === 'publish') {
       db.insert(notifications).values({
         id: crypto.randomUUID(),
         userId: sub.submittedBy,
         type: 'recipe_published',
-        message: `Your recipe "${recipe.title}" has been published!`,
+        message: `Your recipe "${recipe.title}" has been published.`,
+        recipeId: sub.recipeId,
+        recipeSlug: recipe.slug,
+      }).catch(() => {})
+    } else {
+      db.insert(notifications).values({
+        id: crypto.randomUUID(),
+        userId: sub.submittedBy,
+        type: 'recipe_rejected',
+        message: `Your recipe "${recipe.title}" wasn't approved this time. Check your submissions for feedback.`,
         recipeId: sub.recipeId,
         recipeSlug: recipe.slug,
       }).catch(() => {})

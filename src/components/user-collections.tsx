@@ -147,9 +147,12 @@ export function UserCollections({
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <h3 className="font-semibold text-ink text-sm leading-tight">{c.name}</h3>
-                    <button onClick={() => deleteCollection(c.id)} className="text-xs text-ink-ghost hover:text-red-400 transition-colors shrink-0">
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <CopyLinkButton id={c.id} />
+                      <button onClick={() => deleteCollection(c.id)} className="text-xs text-ink-ghost hover:text-red-400 transition-colors">
+                        Delete
+                      </button>
+                    </div>
                   </div>
                   {c.description && <p className="text-xs text-ink-dim mb-2">{c.description}</p>}
                   <p className="text-xs text-ink-ghost mb-3">{recipes.length} recipe{recipes.length !== 1 ? 's' : ''}</p>
@@ -199,5 +202,35 @@ export function UserCollections({
         <div className="hidden">{/* managed via recipe page */}</div>
       )}
     </div>
+  )
+}
+
+function CopyLinkButton({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    const url = `${window.location.origin}/cookbook/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <button
+      onClick={copy}
+      title="Copy shareable link"
+      className="text-xs text-ink-ghost hover:text-ember transition-colors"
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+        </svg>
+      )}
+    </button>
   )
 }

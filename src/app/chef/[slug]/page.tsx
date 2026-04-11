@@ -218,12 +218,17 @@ export default async function ChefPage({
             <h2 className="font-display text-2xl font-bold text-ink mb-6">Collections</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {publicCollections.map((col) => (
-                <div key={col.id} className="rounded-xl border border-line bg-panel p-5">
-                  <h3 className="font-display font-bold text-ink text-sm mb-1">{col.name}</h3>
+                <Link
+                  key={col.id}
+                  href={`/cookbook/${col.id}`}
+                  className="group block rounded-xl border border-line bg-panel hover:border-ember transition-colors p-5"
+                >
+                  <h3 className="font-display font-bold text-ink text-sm mb-1 group-hover:text-ember transition-colors">{col.name}</h3>
                   {col.description && (
                     <p className="text-xs text-ink-ghost line-clamp-2">{col.description}</p>
                   )}
-                </div>
+                  <p className="text-xs text-ink-ghost mt-2">{(col.recipeIds as string[]).length} recipes</p>
+                </Link>
               ))}
             </div>
           </div>
