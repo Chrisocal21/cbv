@@ -61,22 +61,11 @@ export default async function GroceryListPage({
         </div>
 
         {recipes.length > 0 && (
-          <>
-            {/* Recipe source list */}
-            <div className="mb-8 flex flex-wrap gap-2">
-              {recipes.map((r) => (
-                <a
-                  key={r.id}
-                  href={`/recipe/${r.slug}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium bg-panel border border-line text-ink-dim hover:text-ember hover:border-ember px-3 py-1.5 rounded-full transition-colors"
-                >
-                  {r.title}
-                </a>
-              ))}
-            </div>
-
-            <GroceryListClient groups={groups} allItems={allItems} />
-          </>
+          <GroceryListClient
+            groups={groups}
+            allItems={allItems}
+            recipes={recipes.map((r) => ({ slug: r.slug, title: r.title }))}
+          />
         )}
 
         {recipes.length === 0 && (

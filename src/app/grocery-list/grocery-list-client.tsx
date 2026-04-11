@@ -1,15 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Group = { group: string; items: string[] }
+type Recipe = { slug: string; title: string }
 
 export function GroceryListClient({
   groups,
+  recipes,
 }: {
   groups: Group[]
   allItems: string[]
+  recipes: Recipe[]
 }) {
+  const router = useRouter()
+
   // Build a flat list of { key, text } — keyed by position so duplicate ingredient
   // names across different groups are each independently checkable.
   const allRows = groups.flatMap((g, gi) =>
@@ -17,7 +23,6 @@ export function GroceryListClient({
   )
 
   const [checked, setChecked] = useState<Set<string>>(new Set())
-
   const [copied, setCopied] = useState(false)
 
   const toggle = (key: string) => {
@@ -26,6 +31,15 @@ export function GroceryListClient({
       next.has(key) ? next.delete(key) : next.add(key)
       return next
     })
+  }
+
+  const removeRecipe = (slug: string) => {
+    const remaining = recipes.filter((r) => r.slug !== slug).map((r) => r.slug)
+    if (remaining.length === 0) {
+      router.push('/grocery-list')
+    } else {
+      router.push(`/grocery-list?recipes=${remaining.join(',')}`)
+    }
   }
 
   const uncheckedRows = allRows.filter((r) => !checked.has(r.key))
@@ -43,6 +57,27 @@ export function GroceryListClient({
 
   return (
     <div>
+      {/* Recipe source chips with remove buttons */}
+      <div className="mb-8 flex flex-wrap gap-2">
+        {recipes.map((r) => (
+          <div key={r.slug} className="inline-flex items-center gap-1 text-xs font-medium bg-panel border border-line text-ink-dim px-3 py-1.5 rounded-full">
+            <a href={`/recipe/${r.slug}`} className="hover:text-ember transition-colors">
+              {r.title}
+            </a>
+            <button
+              type="button"
+              onClick={() => removeRecipe(r.slug)}
+              className="ml-1 text-ink-ghost hover:text-ink transition-colors"
+              aria-label={`Remove ${r.title}`}
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* Actions */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-sm text-ink-ghost">
