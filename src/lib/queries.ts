@@ -91,6 +91,12 @@ export async function getUserSavedRecipes(recipeIds: string[]): Promise<RecipeRo
   )
 }
 
+/** Fetch any recipes by ID array — used for cook log nutrition lookups */
+export async function getRecipesByIds(recipeIds: string[]): Promise<RecipeRow[]> {
+  if (recipeIds.length === 0) return []
+  return db.select().from(recipes).where(inArray(recipes.id, recipeIds))
+}
+
 /** Submissions for recipes authored by this user */
 export async function getUserSubmissions(userId: string): Promise<(SubmissionRow & { recipe: RecipeRow })[]> {
   const rows = await db.select().from(submissions).where(eq(submissions.submittedBy, userId))

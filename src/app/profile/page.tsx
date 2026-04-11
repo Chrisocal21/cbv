@@ -14,6 +14,7 @@ import {
   getUserSavedRecipes,
   getUserSubmissions,
   getUserProfile,
+  getRecipesByIds,
   type RecipeRow,
   type SubmissionRow,
 } from '@/lib/queries'
@@ -113,6 +114,10 @@ export default async function ProfilePage({
 
   const savedRecipeIds = profile?.savedRecipes ?? []
   const savedRecipes = await getUserSavedRecipes(savedRecipeIds)
+
+  // Fetch all recipes ever cooked (separate from saved — nutrition needs real data)
+  const cookedRecipeIds = [...new Set(cookedEntries.map((e) => e.recipeId))]
+  const cookedRecipes = await getRecipesByIds(cookedRecipeIds)
 
   // Split authored recipes by status
   const published = myRecipes.filter((r) => r.status === 'published')
@@ -216,6 +221,53 @@ export default async function ProfilePage({
                 </div>
               ))}
             </div>
+
+            {/* This week's nutrition */}
+            {(() => {
+              function parseNum(s: string | undefined) { return s ? parseFloat(s.replace(/[^\d.]/g, '')) || 0 : 0 }
+              const now = new Date()
+              const day = now.getDay()
+              const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + (day === 0 ? -6 : 1))
+              const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+              const recipeMap = Object.fromEntries(cookedRecipes.map((r) => [r.id, r]))
+              const thisWeek = cookedEntries.filter((e) => {
+                const d = e.cookedAt instanceof Date ? e.cookedAt : new Date(e.cookedAt)
+                return d >= weekStart && d < weekEnd
+              })
+              const totals = thisWeek.reduce((acc, e) => {
+                const n = recipeMap[e.recipeId]?.nutrition
+                const s = e.servings
+                if (!n) return acc
+                return {
+                  calories: acc.calories + (n.calories || 0) * s,
+                  protein:  acc.protein  + parseNum(n.protein)  * s,
+                  carbs:    acc.carbs    + parseNum(n.carbs)     * s,
+                  fat:      acc.fat      + parseNum(n.fat)       * s,
+                }
+              }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
+              if (thisWeek.length === 0) return null
+              return (
+                <div className="bg-panel border border-line rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">This week</p>
+                    <Link href="/profile?tab=cook-log" className="text-xs text-ember hover:underline">{thisWeek.length} cook{thisWeek.length !== 1 ? 's' : ''}</Link>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    {[
+                      { label: 'Calories', value: Math.round(totals.calories).toLocaleString(), unit: 'kcal' },
+                      { label: 'Protein',  value: Math.round(totals.protein),  unit: 'g' },
+                      { label: 'Carbs',    value: Math.round(totals.carbs),    unit: 'g' },
+                      { label: 'Fat',      value: Math.round(totals.fat),      unit: 'g' },
+                    ].map((m) => (
+                      <div key={m.label}>
+                        <p className="font-display text-xl sm:text-2xl font-bold text-ink">{m.value}<span className="text-xs font-normal text-ink-ghost ml-0.5">{m.unit}</span></p>
+                        <p className="text-xs text-ink-ghost mt-0.5">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Quick actions */}
             <div>
@@ -452,7 +504,7 @@ export default async function ProfilePage({
         )}
 
         {activeTab === 'cook-log' && (
-          <CookLog entries={cookedEntries} savedRecipes={savedRecipes.map((r) => ({ id: r.id, title: r.title, slug: r.slug, nutrition: r.nutrition }))} />
+          <CookLog entries={cookedEntries} savedRecipes={cookedRecipes.map((r) => ({ id: r.id, title: r.title, slug: r.slug, nutrition: r.nutrition }))} />
         )}
 
       </div>

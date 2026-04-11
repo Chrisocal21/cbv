@@ -88,7 +88,7 @@ export function CookLog({ entries, savedRecipes }: Props) {
   if (localEntries.length === 0) {
     return (
       <div className="text-center py-20 text-ink-ghost">
-        <p className="text-4xl mb-3">🍳</p>
+        <svg className="w-10 h-10 mx-auto mb-4 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 19.128v-.003c0-1.113-.425-2.188-1.184-2.995a3.75 3.75 0 00-2.816-1.253 3.75 3.75 0 00-2.816 1.253C7.425 16.94 7 18.015 7 19.128v.003M12 19.128v-.003M6 14.25h.008v.008H6v-.008zm3.75 0h.008v.008H9.75v-.008zm3.75 0h.008v.008h-.008v-.008z" /></svg>
         <p className="text-sm">
           No cooks logged yet. Hit <strong className="text-ink">"I cooked this"</strong> on any recipe to get started.
         </p>
@@ -152,7 +152,11 @@ export function CookLog({ entries, savedRecipes }: Props) {
                 className="text-xs text-ink-ghost hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
                 aria-label="Remove entry"
               >
-                {removing === entry.id ? '…' : '✕'}
+                {removing === entry.id ? (
+                  <span className="text-xs">…</span>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                )}
               </button>
             </div>
           )
