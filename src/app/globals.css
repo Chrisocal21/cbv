@@ -10,12 +10,12 @@
   --font-sans:    var(--font-dm-sans);
 
   /* Page & surface backgrounds */
-  --color-page:         #FAF7F4;
-  --color-panel:        #F3EDE6;
-  --color-panel-raised: #FDFAF7;
+  --color-page:         #F2EBE1;
+  --color-panel:        #EBE0D5;
+  --color-panel-raised: #F7F1EA;
 
   /* Borders */
-  --color-line: #E5D9CF;
+  --color-line: #D9CABF;
 
   /* Text */
   --color-ink:       #1C1410;
