@@ -65,21 +65,6 @@ You land on Cookbookverse. No account required. You're immediately in the world 
 
 ---
 
-## v1 What Was Learned
-
-v1 was backend-first by necessity — learning the stack, learning AI prompting, building the content model. The bones are solid:
-
-- ~30 well-written recipes with rich content (origin stories, nutrition, grocery lists, cultural context)
-- A 5-book content architecture (Culinary Journeys, Seasonal Sensations, Gourmet Guerillas, Quick & Creative, Baking Alchemy)
-- A mature recipe content model that evolved significantly from 2023 to 2025
-- Strong editorial voice — warm, playful, SoCal-inflected, globally curious
-
-**v2 is not a port of v1. It's a fresh build that happens to have great raw material to draw from.**
-
-What gets left behind: blinding white UI, pure CSR architecture (invisible to search engines), no day/night mode, features described but never built.
-
----
-
 ## Success Looks Like
 
 - Someone with no account spends 20 minutes exploring and bookmarks 3 recipes to try

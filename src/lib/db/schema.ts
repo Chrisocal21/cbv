@@ -82,6 +82,8 @@ export const users = pgTable('users', {
   savedRecipes: jsonb('saved_recipes').$type<string[]>().notNull().default([]),
   dietaryPreferences: jsonb('dietary_preferences').$type<string[]>().notNull().default([]),
   fridgeIngredients: jsonb('fridge_ingredients').$type<string[]>().notNull().default([]),
+  weekPlan: jsonb('week_plan').$type<string[]>().notNull().default([]),
+  groceryList: text('grocery_list').notNull().default(''),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 

@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { recipes, submissions, users, staffActivity, promptTemplates } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { runCourtReview } from '@/lib/court-review'
-import { isStaffPersona, STAFF_PERSONAS } from '@/lib/staff'
+import { isStaffPersona, STAFF_PERSONAS, buildStaffPrompt } from '@/lib/staff'
 import { getBudgetStatus } from '@/lib/budget'
 import { randomUUID } from 'crypto'
 
@@ -24,7 +24,7 @@ const GRADIENTS = [
   'from-violet-800 to-purple-600',
 ]
 
-// Per-persona system prompts — each chef has their own voice and focus
+// Per-persona system prompts — lazy fallback, now replaced by buildStaffPrompt below
 const PERSONA_SYSTEMS: Record<string, string> = {
   marco: `You are Marco, Executive Chef at Cookbookverse. You create bold, globally-inspired recipes with confident flavour and technique. Your writing is evocative and slightly poetic — you describe food like you love it. You specialise in global cuisine, fusion, and flavour development.
 
@@ -110,9 +110,13 @@ export async function POST(req: NextRequest) {
   }
   const safeCount = Math.min(5, Math.max(2, Number(count)))
 
-  // Load system prompt from DB, fall back to hardcoded default
+  // Load system prompt — use buildStaffPrompt (with full craft + identity + skill) and fall back to
+  // the legacy DB template or hardcoded default if something goes wrong
+  const generationTask = persona === 'celeste' ? 'generate:baking' : persona === 'soren' ? 'generate:street' : 'generate'
   const templateRows = await db.select().from(promptTemplates).where(eq(promptTemplates.persona, persona)).limit(1)
-  const personaSystem = templateRows[0]?.systemPrompt ?? PERSONA_SYSTEMS[persona]
+  const builtPrompt = buildStaffPrompt(persona, generationTask)
+  // Prefer the enriched buildStaffPrompt; fall back to DB/legacy only if somehow empty
+  const personaSystem = builtPrompt || templateRows[0]?.systemPrompt || PERSONA_SYSTEMS[persona]
   const gradientOptions = GRADIENTS.join(' | ')
   const systemPrompt = `${personaSystem}\n\n${RECIPE_JSON_SCHEMA}\n\nGradient options: ${gradientOptions}`
 

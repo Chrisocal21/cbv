@@ -23,6 +23,7 @@ export function AIChat() {
   const [actions, setActions] = useState<Record<number, ActionState>>({})
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([])
   const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([])
+  const [weekPlan, setWeekPlan] = useState<string[]>([]) // recipe IDs in current week plan
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,6 +39,10 @@ export function AIChat() {
     fetch('/api/user/fridge')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.fridgeIngredients?.length) setFridgeIngredients(data.fridgeIngredients) })
+      .catch(() => {})
+    fetch('/api/user/week-plan')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.recipeIds?.length) setWeekPlan(data.recipeIds) })
       .catch(() => {})
   }, [isSignedIn])
 
@@ -57,7 +62,7 @@ export function AIChat() {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, dietaryPreferences, fridgeIngredients }),
+        body: JSON.stringify({ messages: next, dietaryPreferences, fridgeIngredients, weekPlanIds: weekPlan }),
       })
 
       if (!res.ok || !res.body) throw new Error('Request failed')

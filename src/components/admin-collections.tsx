@@ -23,6 +23,7 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
   const [saving, setSaving] = useState(false)
   const [generatingImg, setGeneratingImg] = useState<string | null>(null)
   const [imgError, setImgError] = useState<string | null>(null)
+  const [theoLoading, setTheoLoading] = useState<string | null>(null)
 
   async function generateImage(id: string) {
     setGeneratingImg(id)
@@ -52,6 +53,20 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
     setEditingId(row.id)
     setEditDesc(row.description)
     setEditGradient(row.gradient)
+  }
+
+  async function runTheoIntro(collectionId: string) {
+    setTheoLoading(collectionId)
+    const res = await fetch('/api/admin/theo-editorial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: 'collection-intro', collectionId }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (data.text) setEditDesc(data.text)
+    }
+    setTheoLoading(null)
   }
 
   function cancelEdit() {
@@ -110,6 +125,13 @@ export function AdminCollections({ initialCollections }: { initialCollections: C
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
               />
+              <button
+                disabled={!!theoLoading}
+                onClick={() => runTheoIntro(row.id)}
+                className="text-xs px-3 py-1.5 rounded-full border border-line text-ink-ghost hover:border-ember hover:text-ember disabled:opacity-40 transition-colors w-fit"
+              >
+                {theoLoading === row.id ? '✍ Thinking…' : '✍ Theo: Write intro'}
+              </button>
               <div>
                 <label className="text-xs text-ink-ghost mb-1 block">Gradient</label>
                 <select

@@ -9,9 +9,11 @@ type Template = {
 }
 
 const PERSONA_META: Record<string, { name: string; role: string; color: string }> = {
-  marco:   { name: 'Marco',   role: 'Executive Chef',           color: 'text-amber-400' },
-  celeste: { name: 'Céleste', role: 'Pastry & Baking Lead',     color: 'text-rose-400' },
-  nadia:   { name: 'Nadia',   role: 'Dietary & Wellness',       color: 'text-emerald-400' },
+  marco:   { name: 'Marco',   role: 'Executive Chef',       color: 'text-amber-400' },
+  celeste: { name: 'Céleste', role: 'Pastry & Baking Lead', color: 'text-rose-400' },
+  nadia:   { name: 'Nadia',   role: 'Dietary & Wellness',   color: 'text-emerald-400' },
+  theo:    { name: 'Theo',    role: 'Editorial Director',   color: 'text-sky-400' },
+  soren:   { name: 'Soren',   role: 'Global Kitchen',       color: 'text-teal-400' },
 }
 
 export function PromptTuner() {
@@ -51,7 +53,7 @@ export function PromptTuner() {
     setTimeout(() => setSaved(null), 2000)
   }
 
-  const personasToShow = ['marco', 'celeste', 'nadia']
+  const personasToShow = ['marco', 'celeste', 'nadia', 'theo', 'soren']
 
   return (
     <div className="border border-line rounded-xl bg-panel mb-6 overflow-hidden">
@@ -62,7 +64,7 @@ export function PromptTuner() {
         <div className="flex items-center gap-3">
           <span className="text-xs text-ink-ghost font-mono bg-white/5 px-2 py-0.5 rounded">PROMPTS</span>
           <span className="text-sm font-medium text-ink-dim">Staff Prompt Templates</span>
-          <span className="text-xs text-ink-ghost">Marco · Céleste · Nadia</span>
+          <span className="text-xs text-ink-ghost">Marco · Céleste · Nadia · Theo · Soren</span>
         </div>
         <span className="text-ink-ghost text-xs">{open ? '▲' : '▼'}</span>
       </button>

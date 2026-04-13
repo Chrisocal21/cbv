@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { recipes, submissions, users, staffActivity } from '@/lib/db/schema'
-import { isStaffPersona } from '@/lib/staff'
+import { isStaffPersona, buildStaffPrompt } from '@/lib/staff'
 import { eq } from 'drizzle-orm'
 import { runCourtReview } from '@/lib/court-review'
 import { randomUUID } from 'crypto'
@@ -24,9 +24,8 @@ const GRADIENTS = [
   'from-violet-800 to-purple-600',
 ]
 
-const GENERATION_SYSTEM = `You are a world-class recipe writer for Cookbookverse — a curated, editorial food platform with high standards. Your recipes are warm, practical, and delicious. They read like they were written by a food editor, not an algorithm.
-
-Generate a single complete recipe based on the user's prompt. Return valid JSON matching this exact shape:
+// The platform format requirement — persona voice is prepended at call time via buildStaffPrompt
+const RECIPE_FORMAT = `Generate a single complete recipe based on the user's prompt. Return valid JSON matching this exact shape:
 
 {
   "title": "string — evocative, specific name",
@@ -84,19 +83,57 @@ export async function POST(req: NextRequest) {
   const staffAuthor = isStaffPersona(attributeTo) ? attributeTo : null
 
   // Step 1: Generate recipe
+  // Route to the persona's specific generation skill:
+  //   soren  → generate:street  (global / street food focus)
+  //   celeste → generate:baking (pastry & baking focus)
+  //   all others → generate
+  const generationTask =
+    staffAuthor === 'soren'   ? 'generate:street' as const :
+    staffAuthor === 'celeste' ? 'generate:baking' as const :
+                                'generate' as const
+
   const gradientOptions = GRADIENTS.join(' | ')
+  const generationSystem = buildStaffPrompt(
+    staffAuthor ?? 'marco',
+    generationTask,
+    `${RECIPE_FORMAT}\n\nGradient options: ${gradientOptions}`,
+  )
   const generation = await openai.chat.completions.create({
     model: 'gpt-4o',
     temperature: 0.8,
     max_tokens: 2000,
     response_format: { type: 'json_object' },
     messages: [
-      { role: 'system', content: GENERATION_SYSTEM + `\n\nGradient options: ${gradientOptions}` },
+      { role: 'system', content: generationSystem },
       { role: 'user', content: prompt },
     ],
   })
 
   const recipeData = JSON.parse(generation.choices[0]?.message?.content ?? '{}')
+
+  // Theo writes the origin story if the initial generation didn't produce one
+  // (or produced a generic/short placeholder). This runs fast — max 200 tokens.
+  if (!recipeData.originStory || recipeData.originStory.trim().length < 60) {
+    try {
+      const originSystem = buildStaffPrompt('theo', 'origin-story')
+      const originResult = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        temperature: 0.7,
+        max_tokens: 200,
+        messages: [
+          { role: 'system', content: originSystem },
+          {
+            role: 'user',
+            content: `Write a 2–3 sentence origin story for this recipe:\nTitle: ${recipeData.title}\nCuisine: ${recipeData.cuisine}\nDescription: ${recipeData.description}`,
+          },
+        ],
+      })
+      const originText = originResult.choices[0]?.message?.content?.trim()
+      if (originText) recipeData.originStory = originText
+    } catch {
+      // Non-fatal — proceed without origin story if Theo's call fails
+    }
+  }
 
   // Build slug from title
   const slug = recipeData.title

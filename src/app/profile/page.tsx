@@ -9,6 +9,7 @@ import { db } from '@/lib/db'
 import { userCollections, cookedLog } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { CookLog } from '@/components/cook-log'
+import { WeekPlan } from '@/components/week-plan'
 import {
   getUserRecipes,
   getUserSavedRecipes,
@@ -18,6 +19,9 @@ import {
   type RecipeRow,
   type SubmissionRow,
 } from '@/lib/queries'
+import { recipes as recipesTable } from '@/lib/db/schema'
+import { inArray } from 'drizzle-orm'
+import { computeOverlaps, type IngredientGroup } from '@/lib/ingredients'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,6 +116,24 @@ export default async function ProfilePage({
     db.select().from(cookedLog).where(eq(cookedLog.userId, userId)).orderBy(desc(cookedLog.cookedAt)).limit(200),
   ])
 
+  // Week plan
+  const weekPlanIds: string[] = profile?.weekPlan ?? []
+  const weekPlanRecipes = weekPlanIds.length > 0
+    ? await db.select().from(recipesTable).where(inArray(recipesTable.id, weekPlanIds))
+    : []
+
+  // Overlap analysis using the shared utility (same logic as /api/user/week-plan)
+  let weekPlanOverlaps: Record<string, string[]> = {}
+  if (weekPlanRecipes.length >= 2) {
+    const allPublished = await db
+      .select({ ingredients: recipesTable.ingredients })
+      .from(recipesTable)
+      .where(eq(recipesTable.status, 'published'))
+    const allIngredients = allPublished.map((r) => r.ingredients as IngredientGroup[])
+    const planForOverlap = weekPlanRecipes.map((r) => ({ id: r.id, ingredients: r.ingredients as IngredientGroup[] }))
+    weekPlanOverlaps = computeOverlaps(planForOverlap, allIngredients)
+  }
+
   const savedRecipeIds = profile?.savedRecipes ?? []
   const savedRecipes = await getUserSavedRecipes(savedRecipeIds)
 
@@ -132,6 +154,7 @@ export default async function ProfilePage({
   const tabs = [
     { id: 'home',        label: 'Home' },
     { id: 'ai',          label: 'AI Kitchen' },
+    { id: 'this-week',   label: 'This week',   count: weekPlanIds.length },
     { id: 'recipes',     label: 'Recipes',     count: myRecipes.length },
     { id: 'saved',       label: 'Saved',       count: savedRecipes.length },
     { id: 'collections', label: 'Collections', count: myCollections.length },
@@ -294,7 +317,7 @@ export default async function ProfilePage({
                   <span className="text-xs text-ink-ghost">Find new recipes</span>
                 </Link>
                 {savedRecipes.length > 0 && (
-                  <Link href={`/grocery-list?recipes=${savedRecipes.map((r) => r.slug).join(',')}`} className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
+                  <Link href={`/grocery-list?recipes=${savedRecipes.slice(0, 20).map((r) => r.slug).join(',')}`} className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
                     <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" /></svg>
                     <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Grocery list</span>
                     <span className="text-xs text-ink-ghost">From {savedRecipes.length} saved</span>
@@ -324,14 +347,21 @@ export default async function ProfilePage({
                   <Link href="/profile?tab=cook-log" className="text-xs text-ember hover:underline">See all</Link>
                 </div>
                 <div className="space-y-2">
-                  {cookedEntries.slice(0, 4).map((entry) => (
-                    <div key={entry.id} className="bg-panel border border-line rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-                      <p className="text-sm text-ink font-medium truncate">{entry.notes || 'Cooked a recipe'}</p>
-                      <p className="text-xs text-ink-ghost flex-shrink-0">
-                        {new Date(entry.cookedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                  ))}
+                  {cookedEntries.slice(0, 4).map((entry) => {
+                    const recipeTitle = cookedRecipes.find((r) => r.id === entry.recipeId)?.title ?? 'Unknown recipe'
+                    return (
+                      <Link
+                        key={entry.id}
+                        href={`/recipe/${entry.recipeSlug}`}
+                        className="bg-panel border border-line rounded-xl px-4 py-3 flex items-center justify-between gap-3 hover:border-ember transition-colors block"
+                      >
+                        <p className="text-sm text-ink font-medium truncate">{recipeTitle}</p>
+                        <p className="text-xs text-ink-ghost flex-shrink-0">
+                          {new Date(entry.cookedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -436,7 +466,7 @@ export default async function ProfilePage({
                 <div className="flex items-center justify-between mb-5">
                   <p className="text-sm text-ink-ghost">{savedRecipes.length} {savedRecipes.length === 1 ? 'recipe' : 'recipes'}</p>
                   <a
-                    href={`/grocery-list?recipes=${savedRecipes.map((r) => r.slug).join(',')}`}
+                    href={`/grocery-list?recipes=${savedRecipes.slice(0, 20).map((r) => r.slug).join(',')}`}
                     className="inline-flex items-center gap-2 text-xs font-medium border border-line hover:border-ember text-ink-dim hover:text-ink px-4 py-2 rounded-full transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
@@ -519,6 +549,15 @@ export default async function ProfilePage({
           <UserCollections
             initialCollections={myCollections as { id: string; name: string; description: string; recipeIds: string[]; createdAt: Date }[]}
             savedRecipes={savedRecipes.map((r) => ({ id: r.id, title: r.title, slug: r.slug, gradient: r.gradient, cuisine: r.cuisine }))}
+          />
+        )}
+
+        {activeTab === 'this-week' && (
+          <WeekPlan
+            initialRecipes={weekPlanRecipes.map((r) => ({ id: r.id, slug: r.slug, title: r.title, subtitle: r.subtitle, cuisine: r.cuisine, totalTime: r.totalTime, difficulty: r.difficulty, gradient: r.gradient, imageUrl: r.imageUrl }))}
+            initialGroceryList={profile?.groceryList ?? ''}
+            overlaps={weekPlanOverlaps}
+            fridgeIngredients={fridgeIngredients}
           />
         )}
 

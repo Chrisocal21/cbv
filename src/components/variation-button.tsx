@@ -5,21 +5,48 @@ import { useRouter } from 'next/navigation'
 
 export function VariationButton({ parentSlug }: { parentSlug: string }) {
   const router = useRouter()
-  const [state, setState] = useState<'idle' | 'confirm' | 'loading'>('idle')
+  const [state, setState] = useState<'idle' | 'confirm' | 'loading' | 'error'>('idle')
   const [note, setNote] = useState('')
 
   async function fork() {
     setState('loading')
-    const res = await fetch('/api/user/submit-variation', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ parentSlug, variationNote: note }),
-    })
-    if (res.ok) {
-      const { slug } = await res.json()
-      router.push(`/recipe/${slug}/edit`)
+    try {
+      const res = await fetch('/api/user/submit-variation', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ parentSlug, variationNote: note }),
+      })
+      if (res.ok) {
+        const { slug } = await res.json()
+        router.push(`/recipe/${slug}/edit`)
+      } else {
+        setState('error')
+      }
+    } catch {
+      setState('error')
     }
-    setState('idle')
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-red-400">Something went wrong. Try again?</span>
+        <button
+          onClick={() => setState('confirm')}
+          className="text-xs text-ink-dim hover:text-ember px-2 py-1"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (state === 'loading') {
+    return (
+      <span className="text-xs text-ink-ghost px-4 py-2 border border-line rounded-full">
+        Creating variation…
+      </span>
+    )
   }
 
   if (state === 'confirm') {

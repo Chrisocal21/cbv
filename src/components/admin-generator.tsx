@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from 'react'
 
 type Verdict = 'pass' | 'flag' | 'reject'
 type RecommendedAction = 'approve' | 'revise' | 'reject'
-type Attribution = 'cookbookverse' | 'marco' | 'celeste' | 'nadia' | 'user'
+type Attribution = 'cookbookverse' | 'marco' | 'celeste' | 'nadia' | 'theo' | 'soren' | 'user'
 
 const STAFF_OPTS: { value: Attribution; label: string; sub: string }[] = [
-  { value: 'marco',   label: 'Marco',    sub: 'Executive Chef' },
-  { value: 'celeste', label: 'Céleste',  sub: 'Pastry & Baking' },
-  { value: 'nadia',   label: 'Nadia',    sub: 'Dietary & Wellness' },
+  { value: 'marco',   label: 'Marco',   sub: 'Executive Chef' },
+  { value: 'celeste', label: 'Céleste', sub: 'Pastry & Baking' },
+  { value: 'nadia',   label: 'Nadia',   sub: 'Dietary & Wellness' },
+  { value: 'theo',    label: 'Theo',    sub: 'Editorial Director' },
+  { value: 'soren',   label: 'Soren',   sub: 'Global Kitchen' },
 ]
 
 type JudgeResult = { verdict: Verdict; notes: string; issues: string[] }
@@ -119,7 +121,7 @@ export function AdminGenerator() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
-  async function suggest(mode: 'surprise' | 'bold' | 'yours' | 'v1archive') {
+  async function suggest(mode: 'surprise' | 'bold' | 'yours' | 'wild' | 'v1archive') {
     setSuggesting(mode)
     const res = await fetch('/api/admin/suggest-recipe', {
       method: 'POST',
@@ -324,9 +326,10 @@ export function AdminGenerator() {
                 </label>
                 <div className="flex items-center gap-2">
                   {([
-                    { mode: 'surprise', label: '✦ Surprise me', title: 'Find a gap we haven\'t filled yet' },
-                    { mode: 'bold', label: '⚡ Be Bold', title: 'Something wild from a lesser-known food culture' },
-                    { mode: 'yours', label: '◎ Your Choice', title: 'A side, snack, or pairing for something we already have' },
+                    { mode: 'surprise',  label: '✦ Surprise me',     title: 'Find a gap we haven\'t filled yet' },
+                    { mode: 'bold',      label: '⚡ Be Bold',         title: 'Something wild from a lesser-known food culture' },
+                    { mode: 'yours',     label: '◎ Your Choice',     title: 'A side, snack, or pairing for something we already have' },
+                    { mode: 'wild',      label: '🌏 Soren\'s Pick',   title: 'Soren\'s wildest street food or fermentation suggestion' },
                     { mode: 'v1archive', label: '♻ From the Archive', title: 'Regenerate a v1 classic as a fresh v2 recipe' },
                   ] as const).map(({ mode, label, title }) => (
                     <button

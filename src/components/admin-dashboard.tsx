@@ -14,6 +14,9 @@ type SubmissionRow = {
     flavourNotes: string | null
     homecookVerdict: Verdict
     homecookNotes: string | null
+    criticVerdict: Verdict
+    criticNotes: string | null
+    criticIssues: string[] | null
     confidenceScore: number | null
     synthesisNotes: string | null
     recommendedAction: Verdict
@@ -188,11 +191,12 @@ export function AdminDashboard() {
               <div className="border-t border-line p-6 space-y-6">
 
                 {/* Judge verdicts */}
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-4 gap-4">
                   {[
                     { label: 'Technique', verdict: sub.techniqueVerdict, notes: sub.techniqueNotes },
                     { label: 'Flavour', verdict: sub.flavourVerdict, notes: sub.flavourNotes },
                     { label: 'Home Cook', verdict: sub.homecookVerdict, notes: sub.homecookNotes },
+                    { label: 'Critic', verdict: sub.criticVerdict, notes: sub.criticNotes },
                   ].map(({ label, verdict, notes }) => (
                     <div key={label} className="rounded-lg border border-line bg-page p-4 space-y-2">
                       <div className="flex items-center justify-between">

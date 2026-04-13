@@ -183,6 +183,103 @@
 
 
 
+## Phase 4 — The Platform as a Teacher / Personal Chef
+
+*Goal: Cookbookverse stops being a place you visit and starts being something that knows you and grows with you as a cook.*
+
+---
+
+### Craft Knowledge Layer (Foundation for everything below)
+- [ ] `craft` block per persona in staff.ts — embedded expert knowledge injected into every AI call
+  - Marco: knife skills, heat science, fat/emulsification, meat, mise en place
+  - Céleste: gluten, sugar stages, leavening chemistry, lamination physics
+  - Nadia: bioavailability, fermentation/gut, allergen science, growing/raising food
+  - Soren: fermentation microbiology, wok hei, curing, spice degradation, foraging
+  - Theo: terroir, food colonialism, technique etymology, cultural accuracy standards
+- [ ] Update `buildStaffPrompt()` to inject craft block
+- [ ] Rethink AI chat routing from single-Nadia to topic-aware persona routing
+
+---
+
+### AI Chat — Culinary Education Mode
+- [ ] Topic-aware routing — technique/heat/knife → Marco · baking science → Céleste · fermentation/global → Soren · nutrition/dietary → Nadia · cultural/history → Theo
+- [ ] "Cook with me" mode — user is mid-cook, asks real-time questions ("my sauce looks broken, what do I do?")
+- [ ] Persona-selectable chat — user picks their expert, gets their distinct voice and knowledge
+- [ ] Context carries across turns — the AI knows what recipe you're working from, what you've cooked before
+
+---
+
+### Nadia — Personal Health Coach Layer
+- [ ] Monthly cook log synthesis — Nadia reads cookedLog and writes a personal nutritional summary
+- [ ] "You haven't cooked a vegetable-forward dish in 3 weeks" — proactive nudge in My Kitchen
+- [ ] Weekly protein/carb/cal breakdown from cook log (data already collected, not yet surfaced)
+- [ ] "Based on what you've been cooking, try this" — Nadia recommendation grounded in log history
+
+---
+
+### The Culinary Curriculum
+- [ ] New collection type: `curriculum` — a recipe sequence with a learning arc, not just a theme
+- [ ] `curriculumStep` ordering field on recipe-collection join
+- [ ] Marco sequences by technique progression (knife skills → stock → mother sauce → derived dishes)
+- [ ] Theo writes the arc narrative — the story of what you're learning and why it matters
+- [ ] "Learn to Braise in 6 Dishes" · "The Five French Mother Sauces" · "Fermentation from Scratch"
+- [ ] Progress tracking — user sees how far through the curriculum they are (based on cook log)
+
+---
+
+### Staff Persona Pages
+- [ ] `/staff/marco` — Marco's full generated recipe archive, expertise areas, voice
+- [ ] `/staff/celeste` — Céleste's baking output, her style and constraints
+- [ ] `/staff/soren` — Soren's global picks, street food archive, Soren's Table history
+- [ ] `/staff/theo` — Theo's editorial features, headlines written, origin stories
+- [ ] `/staff/nadia` — Nadia's dietary guidance, approved recipes, cook log syntheses
+- [ ] Recipe cards link to staff author page (like a byline)
+
+---
+
+### Soren's Table
+- [ ] Weekly editorial: one dish from somewhere most users have never cooked
+- [ ] Extend weekly cron — Ellis triggers Soren `suggest:wild` + `market-source` skills
+- [ ] Admin approves before live — appears as a dedicated homepage section
+- [ ] Archive: past Soren's Table picks browsable
+- [ ] "Soren's reasoning" — visible on the feature card (why this dish, why this week)
+
+---
+
+### Seasonal + Cultural Calendar
+- [ ] `culturalCalendar` table — event, date(s), cultural context, cuisine/collection mapping
+- [ ] Soren curates relevant recipes per event (Lunar New Year, Nowruz, Eid, Diwali, etc.)
+- [ ] Theo `review:cultural` accuracy pass on all calendar-surfaced content before it goes live
+- [ ] Homepage surfaces timely content with cultural context, not just "seasonal"
+- [ ] Opt-in: users set their cultural calendar interests
+
+---
+
+### Court of Chefs Score — Public Trust Signal
+- [ ] Confidence score badge on recipe cards and detail pages — "Staff verified · 94%"
+- [ ] Filter by minimum confidence score on Explore
+- [ ] "Highest rated by the Court" section on homepage
+- [ ] Admin: confidence score trend over time (is quality drifting?)
+
+---
+
+### Personalization Explainability
+- [ ] `surfaceReason: string` per recipe on personalised homepage results
+- [ ] Computed at request time from saves, cook log, dietary prefs, AI history
+- [ ] Rendered as subtle attribution label under card: "Because you saved three Thai recipes this month"
+- [ ] "Nadia picked this" / "Trending in your taste profile" / "You haven't tried this cuisine yet"
+
+---
+
+### Cook Log as a Culinary Journal
+- [ ] Periodic "From your kitchen" card on My Kitchen tab
+- [ ] Nadia synthesises: cook frequency, nutritional patterns, adventurousness score
+- [ ] Marco surfaces technique patterns: "You've made a roux 3 times — here's how to take it further"
+- [ ] Theo: "You've been cooking from 4 continents this month" — cultural breadth note
+- [ ] Cook notes (`cookedLog.notes`) surfaced back to user — the journal they didn't know they were keeping
+
+---
+
 | Feature | Why Cut |
 |---|---|
 | Real-time collaboration | Out of scope — not a social editing tool |

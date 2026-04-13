@@ -23,7 +23,19 @@ export function RecipeActions({
   const { isSignedIn } = useUser()
   const router = useRouter()
   const [saved, setSaved] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(false)
   const [saveLabel, setSaveLabel] = useState<string | null>(null)
+
+  // Load initial saved state for this recipe
+  useEffect(() => {
+    if (!isSignedIn) return
+    fetch('/api/user/save-recipe')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.savedRecipes) setSaved((data.savedRecipes as string[]).includes(recipeId))
+      })
+      .catch(() => {})
+  }, [isSignedIn, recipeId])
   const [copied, setCopied] = useState(false)
   const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'done'>('idle')
   const [collOpen, setCollOpen] = useState(false)
@@ -32,7 +44,36 @@ export function RecipeActions({
   const [groceryList, setGroceryList] = useState<string | null>(null)
   const [groceryState, setGroceryState] = useState<'idle' | 'loading' | 'done'>('idle')
   const [groceryCopied, setGroceryCopied] = useState(false)
+  const [inPlan, setInPlan] = useState<boolean | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
   const collRef = useRef<HTMLDivElement>(null)
+
+  // Load week plan state for this recipe
+  useEffect(() => {
+    if (!isSignedIn) return
+    fetch('/api/user/week-plan')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.recipeIds) setInPlan((data.recipeIds as string[]).includes(recipeId))
+      })
+      .catch(() => {})
+  }, [isSignedIn, recipeId])
+
+  const handleWeekPlan = async () => {
+    if (!isSignedIn) return
+    if (planLoading) return
+    setPlanLoading(true)
+    const res = await fetch('/api/user/week-plan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ recipeId }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setInPlan(data.inPlan)
+    }
+    setPlanLoading(false)
+  }
 
   async function openCollections() {
     if (!isSignedIn) return
@@ -73,6 +114,8 @@ export function RecipeActions({
       setTimeout(() => setSaveLabel(null), 2500)
       return
     }
+    if (saveLoading) return
+    setSaveLoading(true)
     const res = await fetch('/api/user/save-recipe', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -82,6 +125,7 @@ export function RecipeActions({
       const data = await res.json()
       setSaved(data.saved)
     }
+    setSaveLoading(false)
   }
 
   const handleShare = async () => {
@@ -212,6 +256,20 @@ export function RecipeActions({
           )}
         </div>
       )}
+      {isSignedIn && inPlan !== null && (
+        <button
+          onClick={handleWeekPlan}
+          disabled={planLoading}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+            inPlan
+              ? 'bg-ember/15 text-ember border-ember/40 hover:bg-ember/25'
+              : 'bg-panel border-line text-ink-dim hover:border-ember hover:text-ink'
+          }`}
+        >
+          <CalendarIcon />
+          {planLoading ? '…' : inPlan ? 'In your week plan' : 'Add to this week'}
+        </button>
+      )}
       <button
         onClick={handleGroceryList}
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
@@ -282,6 +340,17 @@ function ListIcon() {
       <line x1="3" y1="6" x2="3.01" y2="6" />
       <line x1="3" y1="12" x2="3.01" y2="12" />
       <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
   )
 }

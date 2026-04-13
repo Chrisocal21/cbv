@@ -63,7 +63,6 @@ export default async function GroceryListPage({
         {recipes.length > 0 && (
           <GroceryListClient
             groups={groups}
-            allItems={allItems}
             recipes={recipes.map((r) => ({ slug: r.slug, title: r.title }))}
           />
         )}

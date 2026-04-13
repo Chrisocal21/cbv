@@ -64,7 +64,7 @@ export async function getRecentRecipes(limit = 3): Promise<RecipeRow[]> {
     .select()
     .from(recipes)
     .where(eq(recipes.status, 'published'))
-    .orderBy(recipes.publishedAt)
+    .orderBy(desc(recipes.publishedAt))
     .limit(limit)
 }
 
@@ -188,6 +188,16 @@ export async function getPublishedRecipesByStaff(persona: string): Promise<Recip
 /** Look up a user by their username (for public profile URLs) */
 export async function getUserByUsername(username: string): Promise<UserRow | undefined> {
   const rows = await db.select().from(users).where(eq(users.username, username)).limit(1)
+  return rows[0]
+}
+
+/** Look up a user by their Clerk userId — returns only public-facing fields */
+export async function getUserById(userId: string): Promise<Pick<UserRow, 'id' | 'username' | 'displayName' | 'avatarUrl'> | undefined> {
+  const rows = await db
+    .select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
   return rows[0]
 }
 

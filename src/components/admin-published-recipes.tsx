@@ -45,6 +45,8 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   const [imgError, setImgError] = useState<string | null>(null)
   const [imgMode, setImgMode] = useState<'real' | 'expectation'>('real')
   const [bulkRegen, setBulkRegen] = useState<{ done: number; total: number } | null>(null)
+  const [theoTask, setTheoTask] = useState<string | null>(null)
+  const [theoOutput, setTheoOutput] = useState<{ label: string; text: string } | null>(null)
 
   const generateImage = async (id: string) => {
     setGeneratingImg(id)
@@ -139,6 +141,26 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
       })
     }
     setLoadingEdit(false)
+  }
+
+  const runTheo = async (task: string, recipeId: string, label: string) => {
+    setTheoTask(task)
+    setTheoOutput(null)
+    const res = await fetch('/api/admin/theo-editorial', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ task, recipeId }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      if (task === 'recipe-headline') {
+        setEditState((s) => s ? { ...s, title: data.title ?? s.title, subtitle: data.subtitle ?? s.subtitle } : s)
+        setTheoOutput(null)
+      } else {
+        setTheoOutput({ label, text: data.text ?? '' })
+      }
+    }
+    setTheoTask(null)
   }
 
   const saveEdit = async (id: string) => {
@@ -325,6 +347,50 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
                         </div>
                         {field('description', 'Description', true)}
                         {field('originStory', 'Origin story', true)}
+
+                        {/* Theo editorial tools */}
+                        <div className="border-t border-line pt-4">
+                          <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-3">✍ Theo</p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              disabled={!!theoTask}
+                              onClick={() => runTheo('recipe-headline', r.id, 'Headline')}
+                              title="Theo suggests a better title and subtitle — auto-fills the fields above"
+                              className="text-xs px-3 py-1.5 rounded-full border border-line text-ink-ghost hover:border-ember hover:text-ember disabled:opacity-40 transition-colors"
+                            >
+                              {theoTask === 'recipe-headline' ? 'Thinking…' : 'Suggest headline'}
+                            </button>
+                            <button
+                              disabled={!!theoTask}
+                              onClick={() => runTheo('editorial-intro', r.id, 'Editorial intro')}
+                              title="Theo writes an editorial intro for Today's Pick usage"
+                              className="text-xs px-3 py-1.5 rounded-full border border-line text-ink-ghost hover:border-ember hover:text-ember disabled:opacity-40 transition-colors"
+                            >
+                              {theoTask === 'editorial-intro' ? 'Thinking…' : 'Editorial intro'}
+                            </button>
+                            <button
+                              disabled={!!theoTask}
+                              onClick={() => runTheo('feature-pitch', r.id, 'Feature pitch')}
+                              title="Theo writes a feature pitch — why this recipe, why now"
+                              className="text-xs px-3 py-1.5 rounded-full border border-line text-ink-ghost hover:border-ember hover:text-ember disabled:opacity-40 transition-colors"
+                            >
+                              {theoTask === 'feature-pitch' ? 'Thinking…' : 'Feature pitch'}
+                            </button>
+                          </div>
+                          {theoOutput && (
+                            <div className="mt-3 rounded-lg border border-line bg-page p-4">
+                              <p className="text-xs font-semibold text-ink-ghost mb-2">{theoOutput.label}</p>
+                              <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap">{theoOutput.text}</p>
+                              <button
+                                onClick={() => setTheoOutput(null)}
+                                className="mt-2 text-xs text-ink-ghost hover:text-ink transition-colors"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex gap-2 pt-1">
                           <button
                             onClick={() => saveEdit(r.id)}

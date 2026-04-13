@@ -1,5 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { getFeaturedRecipe, getAllRecipes, getCollectionsWithSpotlight, getUserProfile, getUserCookedRecipeIds, getTrendingRecipes } from '@/lib/queries'
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { inArray } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
@@ -15,6 +18,15 @@ export default async function HomePage() {
     userId ? getUserCookedRecipeIds(userId) : Promise.resolve([] as string[]),
     getTrendingRecipes(6),
   ])
+
+  // Build user author lookup for recipe grids
+  const userAuthorIds = [...new Set(allRecipes.filter((r) => r.authorId && !r.staffAuthor).map((r) => r.authorId!))]
+  const authorRows = userAuthorIds.length > 0
+    ? await db.select({ id: users.id, username: users.username, displayName: users.displayName }).from(users).where(inArray(users.id, userAuthorIds))
+    : []
+  const userAuthors = Object.fromEntries(
+    authorRows.filter((a) => a.username).map((a) => [a.id, { username: a.username!, displayName: a.displayName }])
+  )
 
   // New additions — most recent 3 published recipes (excluding featured)
   const newAdditions = allRecipes
@@ -278,9 +290,13 @@ export default async function HomePage() {
                   <h3 className="font-display text-lg font-bold text-ink group-hover:text-ember transition-colors leading-snug mb-2">
                     {recipe.title}
                   </h3>
-                  {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) && (
-                    <a href={`/chef/${recipe.staffAuthor}`} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">by {STAFF_PERSONAS[recipe.staffAuthor].name}</a>
-                  )}
+                  {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) ? (
+                    <a href={`/chef/${recipe.staffAuthor}`} onClick={(e) => e.stopPropagation()} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">by {STAFF_PERSONAS[recipe.staffAuthor].name}</a>
+                  ) : recipe.authorId && userAuthors[recipe.authorId] ? (
+                    <a href={`/chef/${userAuthors[recipe.authorId].username}`} onClick={(e) => e.stopPropagation()} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">
+                      by {userAuthors[recipe.authorId].displayName ?? userAuthors[recipe.authorId].username}
+                    </a>
+                  ) : null}
                   <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                     {recipe.description}
                   </p>

@@ -65,6 +65,23 @@
 
 ---
 
+## Horizon — Questions Raised by Phase 4 Capabilities
+
+*These don't need answers now — but they need answers before any Phase 4 build begins.*
+
+- [ ] **AI chat routing** — when the chat has 5 expert personas, does routing happen automatically (system detects question type and picks persona) or does the user explicitly pick their expert? Or both — auto-route as default, persona picker as an opt-in?
+- [ ] **"Cook with me" mode** — is this a separate chat mode with a different UI, or just the existing chat with richer context? Do we need to detect that a user is mid-cook, or do they declare it?
+- [ ] **Culinary curriculum collection type** — does this need a new DB field (`collectionType`) or is it a flag on an existing collection? What does the UI look like — a card deck? A linear progress bar? Both?
+- [ ] **Staff persona pages** — are these public (anyone can view) or user-facing only? Do they need SEO indexing? (`/staff/marco` vs `/chef/marco`)
+- [ ] **Court of Chefs score public display** — full number ("94/100") or abstracted levels (Verified / Highly Verified / Staff Favourite)? Where does it appear — recipe cards, detail page, both?
+- [ ] **Cultural calendar opt-in** — does the user set their calendar interests in account settings, or does the platform infer from their cook history (saved Lunar New Year dishes → surface Lunar New Year content)?
+- [ ] **Personalization explainability text** — how specific vs. generic? "Because you saved three Thai recipes" is specific and accurate. "Based on your taste profile" is generic and meaningless. Where is the right level of detail, and what happens when the reason is embarrassing ("Because you haven't cooked anything in a month")?
+- [ ] **Nadia health coaching cadence** — monthly synthesis? Weekly? On demand? Triggered by hitting a milestone ("10 cooked it logs")? Notification or card on My Kitchen tab?
+- [ ] **Cook log journal** — do cook notes stay private, or could they be optionally shared (my variation notes become visible to others who saved the same recipe)?
+- [ ] **Soren's Table editorial process** — does Soren suggest and admin approves, or is it fully autonomous? What's the lead time before publication? Is there a "next week" queue?
+
+---
+
 ## Answered Questions (Archived)
 
 | Question | Decision | Session |

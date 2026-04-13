@@ -22,6 +22,7 @@ function personaColor(persona: string) {
     celeste: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
     nadia:   'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     theo:    'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    soren:   'bg-teal-500/20 text-teal-400 border-teal-500/30',
     ellis:   'bg-violet-500/20 text-violet-400 border-violet-500/30',
     rex:     'bg-stone-500/20 text-stone-400 border-stone-500/30',
   }

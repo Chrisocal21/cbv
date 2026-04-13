@@ -11,7 +11,6 @@ export function GroceryListClient({
   recipes,
 }: {
   groups: Group[]
-  allItems: string[]
   recipes: Recipe[]
 }) {
   const router = useRouter()

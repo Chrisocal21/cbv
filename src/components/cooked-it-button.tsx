@@ -16,13 +16,17 @@ export function CookedItButton({ recipeId, recipeSlug, recipeTitle }: Props) {
 
   async function log() {
     setLoading(true)
-    await fetch('/api/user/cooked-log', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ recipeId, recipeSlug, servings, notes }),
-    })
-    setLoading(false)
-    setState('done')
+    try {
+      const res = await fetch('/api/user/cooked-log', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ recipeId, recipeSlug, servings, notes }),
+      })
+      if (res.ok) setState('done')
+      // If not ok (e.g. 401 signed-out), stay in 'confirm' state silently
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (state === 'done') {

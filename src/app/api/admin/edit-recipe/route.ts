@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { users, recipes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { buildStaffPrompt } from '@/lib/staff'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -29,10 +30,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: 'system',
-        content: `You are a recipe editor. You will receive a recipe as JSON and an edit instruction from an admin.
-Apply the instruction precisely and return the complete updated recipe JSON with the same shape as the input.
-Only change what the instruction asks. Keep everything else identical.
-Return the full recipe object — not just the changed fields.`,
+        content: buildStaffPrompt('marco', 'edit'),
       },
       {
         role: 'user',

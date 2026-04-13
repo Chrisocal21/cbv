@@ -4,6 +4,7 @@ import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { users, recipes } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { buildStaffPrompt } from '@/lib/staff'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -38,29 +39,7 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: 'system',
-        content: `You are a senior recipe editor at a curated food platform. A QA reviewer has identified specific real problems in a recipe. Your job is to fix them properly.
-
-For each issue, your process is:
-1. Understand WHY it is a problem — what would actually go wrong for a real cook?
-2. Determine the RIGHT fix for this specific type of dish and cuisine — not a generic fix, the correct one
-3. Apply the minimal change that resolves the issue without changing the character of the recipe
-
-How to approach specific fix types:
-- Wrong temperature or time → reason from the method, ingredient density, and pan/oven type; what does this dish actually need?
-- Vague doneness cues → replace with specific sensory cues the cook can actually perceive: colour, texture, aroma, sound, how the pan looks
-- Unverifiable nutrition → estimate from the actual stated quantities using standard food composition data
-- Hard to source ingredient → add a practical substitution in parentheses on the same ingredient line
-- Description promises something the ingredients cannot deliver → either adjust the technique to deliver it, or rewrite the description to be honest about what you actually get
-- Missing critical information → add only what a cook genuinely needs at that moment, not what sounds thorough
-
-Rules:
-- Do NOT change the title, cuisine, collection, gradient, or anything not in the issues list
-- Do NOT rewrite sections that were not flagged
-- Do NOT make the recipe more complex — simpler and more precise is always the goal
-- If fixing an issue would require fundamentally changing the dish, adjust the expectation in the description instead
-- Think like someone who has cooked this exact type of dish many times and knows where people go wrong
-
-Return the complete recipe JSON with exactly the same structure as the input.`,
+        content: buildStaffPrompt('marco', 'apply-critic'),
       },
       {
         role: 'user',

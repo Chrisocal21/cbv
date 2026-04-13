@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
-import { getAllRecipes, getRecipeBySlug, getUserProfile, getRecipeCookCount, getRecipeVariations } from '@/lib/queries'
+import { getAllRecipes, getRecipeBySlug, getUserProfile, getRecipeCookCount, getRecipeVariations, getUserById } from '@/lib/queries'
 import { db } from '@/lib/db'
 import { recipes as recipesTable } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
@@ -12,6 +12,7 @@ import { VariationButton } from '@/components/variation-button'
 import { IngredientsPanel } from '@/components/ingredients-panel'
 import { CookedItButton } from '@/components/cooked-it-button'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
+import { normalizeIngredient, computeOverlaps, type IngredientGroup } from '@/lib/ingredients'
 
 import type { Metadata } from 'next'
 
@@ -69,15 +70,37 @@ export default async function RecipePage({
       .catch(() => {}) // non-blocking, ignore errors
   }
 
-  const [allRecipes, profile, cookCount, variations] = await Promise.all([
+  const [allRecipes, profile, cookCount, variations, recipeAuthor] = await Promise.all([
     getAllRecipes(),
     userId ? getUserProfile(userId) : null,
     recipe.status === 'published' ? getRecipeCookCount(recipe.id) : Promise.resolve(0),
     recipe.status === 'published' ? getRecipeVariations(recipe.id) : Promise.resolve([]),
+    // Fetch human author if present and not a staff recipe
+    recipe.authorId && !recipe.staffAuthor ? getUserById(recipe.authorId) : Promise.resolve(undefined),
   ])
   const related = allRecipes
     .filter((r) => r.id !== recipe.id && r.status === 'published' && (r.collection === recipe.collection || r.cuisine === recipe.cuisine))
     .slice(0, 3)
+
+  // Week plan overlap callout: find plan recipes that share a non-staple ingredient with this one
+  const weekPlanIds: string[] = profile?.weekPlan ?? []
+  const weekPlanOverlapRecipes: { title: string; sharedIngredients: string[] }[] = []
+
+  if (weekPlanIds.length > 0 && !weekPlanIds.includes(recipe.id)) {
+    const planRecipes = allRecipes.filter((r) => weekPlanIds.includes(r.id))
+    const allIngredients = allRecipes.map((r) => r.ingredients as IngredientGroup[])
+    const planForOverlap = planRecipes.map((r) => ({ id: r.id, ingredients: r.ingredients as IngredientGroup[] }))
+    // Temporarily include this recipe as a "plan recipe" so computeOverlaps can find what it shares with the actual plan
+    const thisAsEntry = { id: recipe.id, ingredients: recipe.ingredients as IngredientGroup[] }
+    const overlaps = computeOverlaps([thisAsEntry, ...planForOverlap], allIngredients)
+    const sharedWithThis = overlaps[recipe.id] ?? []
+    for (const planRecipe of planRecipes) {
+      const planShared = (overlaps[planRecipe.id] ?? []).filter((ing) => sharedWithThis.includes(ing))
+      if (planShared.length > 0) {
+        weekPlanOverlapRecipes.push({ title: planRecipe.title, sharedIngredients: planShared.slice(0, 2) })
+      }
+    }
+  }
 
   // "Because you saved X" — recipes that match what the user has saved before
   const savedIds = new Set(profile?.savedRecipes ?? [])
@@ -115,6 +138,10 @@ export default async function RecipePage({
         {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) ? (
           <Link href={`/chef/${recipe.staffAuthor}`} className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors">
             By {STAFF_PERSONAS[recipe.staffAuthor].name} · Cookbookverse Kitchen
+          </Link>
+        ) : recipeAuthor?.username ? (
+          <Link href={`/chef/${recipeAuthor.username}`} className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm hover:bg-black/60 transition-colors">
+            By {recipeAuthor.displayName ?? recipeAuthor.username}
           </Link>
         ) : recipe.aiGenerated && (
           <span className="absolute top-5 left-5 text-xs font-semibold tracking-[0.12em] uppercase bg-black/40 text-white/90 px-3 py-1.5 rounded-full backdrop-blur-sm">
@@ -176,6 +203,35 @@ export default async function RecipePage({
               </Link>
               {' '}· {STAFF_PERSONAS[recipe.staffAuthor].role} · Cookbookverse Kitchen
             </p>
+          )}
+
+          {/* User attribution */}
+          {!recipe.staffAuthor && recipeAuthor?.username && (
+            <p className="text-sm text-ink-ghost mt-3">
+              Submitted by{' '}
+              <Link href={`/chef/${recipeAuthor.username}`} className="text-ink font-medium hover:text-ember transition-colors">
+                {recipeAuthor.displayName ?? recipeAuthor.username}
+              </Link>
+            </p>
+          )}
+
+          {/* Week plan overlap callout */}
+          {weekPlanOverlapRecipes.length > 0 && (
+            <div className="mt-5 flex items-start gap-3 bg-ember/8 border border-ember/20 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-ember flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="16" y1="2" x2="16" y2="6" strokeLinecap="round" /><line x1="8" y1="2" x2="8" y2="6" strokeLinecap="round" /><line x1="3" y1="10" x2="21" y2="10" strokeLinecap="round" />
+              </svg>
+              <p className="text-sm text-ink-dim">
+                {weekPlanOverlapRecipes.map((r, i) => (
+                  <span key={i}>
+                    {i > 0 && ' · '}
+                    <span className="text-ink font-medium">You&rsquo;re making {r.title} this week</span>
+                    {r.sharedIngredients.length > 0 && <> — both need <span className="text-ember">{r.sharedIngredients.join(' and ')}</span></>}
+                  </span>
+                ))}
+              </p>
+            </div>
           )}
 
           {/* Tags */}

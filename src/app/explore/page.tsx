@@ -1,4 +1,7 @@
 import { getAllRecipes, getTrendingRecipes } from '@/lib/queries'
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { inArray } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
 import { ExploreFilters } from '@/components/explore-filters'
 
@@ -11,6 +14,16 @@ export default async function ExplorePage({
 }) {
   const [recipes, trending] = await Promise.all([getAllRecipes(), getTrendingRecipes(6)])
   const params = await searchParams
+
+  // Build a lookup map of user-authored recipes' authors
+  const userAuthorIds = [...new Set(recipes.filter((r) => r.authorId && !r.staffAuthor).map((r) => r.authorId!))]
+  const authorRows = userAuthorIds.length > 0
+    ? await db.select({ id: users.id, username: users.username, displayName: users.displayName })
+        .from(users).where(inArray(users.id, userAuthorIds))
+    : []
+  const userAuthors = Object.fromEntries(
+    authorRows.filter((a) => a.username).map((a) => [a.id, { username: a.username!, displayName: a.displayName }])
+  )
 
   const initialFilters = {
     search: params.search ?? '',
@@ -74,7 +87,7 @@ export default async function ExplorePage({
           </section>
         )}
 
-        <ExploreFilters recipes={recipes} initialFilters={initialFilters} />
+        <ExploreFilters recipes={recipes} initialFilters={initialFilters} userAuthors={userAuthors} />
       </div>
 
       <footer className="border-t border-line bg-panel">
