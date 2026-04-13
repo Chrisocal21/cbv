@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
   // Each suggestion mode is owned by a specific persona
   type ModeConfig = { persona: Parameters<typeof buildStaffPrompt>[0]; task: Parameters<typeof buildStaffPrompt>[1]; temperature: number }
-  const modeConfig: Record<typeof mode, ModeConfig> = {
+  const modeConfig: Record<'surprise' | 'bold' | 'yours' | 'wild', ModeConfig> = {
     surprise:   { persona: 'marco',  task: 'suggest:gap',   temperature: 1.1 },
     bold:       { persona: 'marco',  task: 'suggest:bold',  temperature: 1.2 },
     yours:      { persona: 'nadia',  task: 'suggest',       temperature: 0.9 },
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     v1archive:  { persona: 'marco',  task: 'suggest:gap',   temperature: 1.1 }, // fallback, never reached
   }
 
-  const { persona, task, temperature } = modeConfig[mode]
+  const { persona, task, temperature } = modeConfig[mode as 'surprise' | 'bold' | 'yours' | 'wild']
   const systemPrompt = buildStaffPrompt(persona, task, baseContext)
 
   const completion = await openai.chat.completions.create({
