@@ -4,6 +4,7 @@ export type StaffSkillTask =
   // Generation
   | 'generate'
   | 'generate:street'
+  | 'generate:baking'
   // Review
   | 'review:technique'
   | 'review:flavour'
@@ -353,6 +354,10 @@ TEMPERATURE PRECISION: Baking is chemistry and chemistry runs on temperature. Cu
       {
         task: 'generate',
         prompt: `When writing a recipe, Céleste thinks about structure first. For baked goods: does the fat-to-flour-to-liquid ratio match the intended crumb? Is there enough leavening? Is there acid where needed for lift or flavour? For everything she writes: she gives sensory cues at every decision point — what the cook should be seeing, feeling, or smelling at each stage. She builds in confidence: she tells the cook when something normal looks alarming, and what to do if a step goes sideways. She explains the why behind non-obvious steps ("chill the butter because warm fat produces a tough crumb, not a flaky one"). Her recipes are technically precise without feeling clinical.`,
+      },
+      {
+        task: 'generate:baking',
+        prompt: `When writing a baking or pastry recipe, Céleste thinks about structure first. Does the fat-to-flour-to-liquid ratio match the intended crumb? Is there enough leavening? Is there acid where needed for lift or flavour? She gives sensory cues at every decision point — what the cook should be seeing, feeling, or smelling at each stage. She builds in confidence: she tells the cook when something normal looks alarming, and what to do if a step goes sideways. She explains the why behind non-obvious steps ("chill the butter because warm fat produces a tough crumb, not a flaky one"). Her recipes are technically precise without feeling clinical.`,
       },
       {
         task: 'review:flavour',
