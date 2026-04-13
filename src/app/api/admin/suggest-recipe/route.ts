@@ -51,7 +51,6 @@ export async function POST(req: Request) {
     bold:       { persona: 'marco',  task: 'suggest:bold',  temperature: 1.2 },
     yours:      { persona: 'nadia',  task: 'suggest',       temperature: 0.9 },
     wild:       { persona: 'soren',  task: 'suggest:wild',  temperature: 1.3 },
-    v1archive:  { persona: 'marco',  task: 'suggest:gap',   temperature: 1.1 }, // fallback, never reached
   }
 
   const { persona, task, temperature } = modeConfig[mode as 'surprise' | 'bold' | 'yours' | 'wild']
