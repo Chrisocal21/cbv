@@ -527,115 +527,46 @@ export function AdminGenerator() {
 
               </>)})()}
 
-              {/* Court report */}
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Court of Chefs</p>
-
-                {/* Three standard judges */}
-                <div className="grid md:grid-cols-3 gap-3">
-                  {([
-                    { label: 'Technique', judge: result.report.technique },
-                    { label: 'Flavour', judge: result.report.flavour },
-                    { label: 'Home Cook', judge: result.report.homecook },
-                  ] as const).map(({ label, judge }) => (
-                    <div key={label} className="rounded-lg border border-line bg-page p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-ghost">{label}</p>
-                        <VerdictBadge verdict={judge.verdict} />
-                      </div>
-                      <p className="text-sm text-ink-dim leading-relaxed">{judge.notes}</p>
-                      {judge.issues?.length > 0 && (
-                        <ul className="space-y-1 pt-1">
-                          {judge.issues.map((issue, i) => (
-                            <li key={i} className="text-xs text-amber-400 flex gap-1.5">
-                              <span className="mt-0.5 flex-shrink-0">!</span>{issue}
+              {/* Court report — synthesis + flags only */}
+              {(() => {
+                const { synthesis, technique, flavour, homecook, critic } = result.report
+                const allJudges = [technique, flavour, homecook, critic]
+                const flagged = allJudges.flatMap((j) => j?.issues ?? []).filter(Boolean)
+                const hasFlags = flagged.length > 0
+                const action = synthesis.recommendedAction
+                const borderColor = action === 'approve' ? 'border-green-500/30' : action === 'reject' ? 'border-red-500/30' : 'border-amber-500/30'
+                const bgColor = action === 'approve' ? 'bg-green-500/5' : action === 'reject' ? 'bg-red-500/5' : 'bg-amber-500/5'
+                const actionColor = action === 'approve' ? 'bg-green-500/20 text-green-400 border-green-500/30' : action === 'reject' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                return (
+                  <div className={`rounded-xl border ${borderColor} ${bgColor} p-5 space-y-3`}>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Court verdict</p>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded border ${actionColor}`}>{action}</span>
+                    </div>
+                    <p className="text-sm text-ink-dim leading-relaxed">{synthesis.synthesisNotes}</p>
+                    {hasFlags && (
+                      <div className="pt-2 border-t border-line/40 flex items-start justify-between gap-4">
+                        <ul className="space-y-1 flex-1">
+                          {flagged.map((issue, i) => (
+                            <li key={i} className="text-xs text-amber-400 flex gap-1.5 items-start">
+                              <span className="flex-shrink-0 mt-0.5">·</span>{issue}
                             </li>
                           ))}
                         </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Devil's Advocate — full width, distinct styling */}
-                {(() => {
-                  const critic = result.report.critic
-                  const hasIssues = critic?.issues?.length > 0
-                  const borderColor = critic?.verdict === 'reject'
-                    ? 'border-red-500/40'
-                    : critic?.verdict === 'flag'
-                    ? 'border-amber-500/40'
-                    : 'border-line'
-                  const bgColor = critic?.verdict === 'reject'
-                    ? 'bg-red-500/5'
-                    : critic?.verdict === 'flag'
-                    ? 'bg-amber-500/5'
-                    : 'bg-page'
-                  return (
-                    <div className={`rounded-lg border ${borderColor} ${bgColor} p-4 space-y-3`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400">Cultural Review</p>
-                          <span className="text-xs text-ink-ghost border border-line rounded px-1.5 py-0.5">Soren · Authenticity</span>
-                        </div>
-                        <VerdictBadge verdict={critic?.verdict ?? 'pass'} />
+                        <button
+                          disabled={applyingCritic || chatLoading || decided !== null}
+                          onClick={applyCritic}
+                          className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {applyingCritic ? (
+                            <><span className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin" /> Fixing…</>
+                          ) : '⚡ Fix issues'}
+                        </button>
                       </div>
-                      <p className="text-sm text-ink-dim leading-relaxed">{critic?.notes}</p>
-                      {hasIssues && (
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400/70 mb-2">Specific problems</p>
-                          <ul className="space-y-2">
-                            {critic.issues.map((issue, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 text-xs flex items-center justify-center mt-0.5 font-bold">{i + 1}</span>
-                                <span className="text-ink-dim">{issue}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {!hasIssues && critic?.verdict === 'pass' && (
-                        <p className="text-xs text-green-400/80 border border-green-500/20 rounded px-3 py-1.5">Cultural review passed — no authenticity issues found.</p>
-                      )}
-                      {(hasIssues || critic?.verdict !== 'pass') && (
-                        <div className="pt-1 border-t border-line/50 flex items-center justify-between gap-3">
-                          <p className="text-xs text-ink-ghost">
-                            {critic?.verdict === 'pass' ? 'Critic passed — nothing to fix.' : `${critic?.issues?.length ?? 0} problem${critic?.issues?.length !== 1 ? 's' : ''} flagged`}
-                          </p>
-                          <button
-                            disabled={applyingCritic || chatLoading || decided !== null}
-                            onClick={applyCritic}
-                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            {applyingCritic ? (
-                              <><span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" /> Fixing…</>
-                            ) : (
-                              '⚡ Apply critic corrections'
-                            )}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {/* Synthesis */}
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-400">Synthesis</p>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
-                      result.report.synthesis.recommendedAction === 'approve'
-                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                        : result.report.synthesis.recommendedAction === 'reject'
-                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                    }`}>
-                      {result.report.synthesis.recommendedAction}
-                    </span>
+                    )}
                   </div>
-                  <p className="text-sm text-ink-dim leading-relaxed">{result.report.synthesis.synthesisNotes}</p>
-                </div>
-              </div>
+                )
+              })()}
 
               {/* Chat edit panel */}
               <div className="border border-line rounded-xl overflow-hidden">
