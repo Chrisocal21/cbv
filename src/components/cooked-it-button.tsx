@@ -9,10 +9,11 @@ interface Props {
 }
 
 export function CookedItButton({ recipeId, recipeSlug, recipeTitle }: Props) {
-  const [state, setState] = useState<'idle' | 'confirm' | 'done'>('idle')
+  const [state, setState] = useState<'idle' | 'confirm' | 'rating' | 'done'>('idle')
   const [servings, setServings] = useState(2)
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [logId, setLogId] = useState<string | null>(null)
 
   async function log() {
     setLoading(true)
@@ -22,18 +23,60 @@ export function CookedItButton({ recipeId, recipeSlug, recipeTitle }: Props) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ recipeId, recipeSlug, servings, notes }),
       })
-      if (res.ok) setState('done')
-      // If not ok (e.g. 401 signed-out), stay in 'confirm' state silently
+      if (res.ok) {
+        const data = await res.json()
+        setLogId(data.entry?.id ?? null)
+        setState('rating')
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  async function rate(rating: 1 | -1) {
+    if (logId) {
+      await fetch('/api/user/cooked-log', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: logId, rating }),
+      })
+    }
+    setState('done')
+  }
+
   if (state === 'done') {
     return (
-      <span className="text-xs text-inbox px-4 py-2 border border-line rounded-full bg-panel flex items-center gap-1.5">
+      <span className="text-xs px-4 py-2 border border-line rounded-full bg-panel flex items-center gap-1.5 text-ink-dim">
         ✅ Logged — nice work!
       </span>
+    )
+  }
+
+  if (state === 'rating') {
+    return (
+      <div className="p-4 bg-panel border border-line rounded-2xl space-y-3 max-w-xs">
+        <p className="text-sm font-medium text-ink">How was it?</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => rate(1)}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-line hover:border-green-500/50 hover:bg-green-500/10 hover:text-green-400 transition-colors text-ink-dim"
+          >
+            👍 Loved it
+          </button>
+          <button
+            onClick={() => rate(-1)}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-line hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-400 transition-colors text-ink-dim"
+          >
+            👎 Meh
+          </button>
+          <button
+            onClick={() => setState('done')}
+            className="text-xs text-ink-ghost hover:text-ink transition-colors px-1"
+          >
+            Skip
+          </button>
+        </div>
+      </div>
     )
   }
 

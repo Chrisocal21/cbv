@@ -10,6 +10,7 @@ import { userCollections, cookedLog } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { CookLog } from '@/components/cook-log'
 import { WeekPlan } from '@/components/week-plan'
+import { CookHeatmap } from '@/components/cook-heatmap'
 import {
   getUserRecipes,
   getUserSavedRecipes,
@@ -141,6 +142,62 @@ export default async function ProfilePage({
   const cookedRecipeIds = [...new Set(cookedEntries.map((e) => e.recipeId))]
   const cookedRecipes = await getRecipesByIds(cookedRecipeIds)
 
+  // ── Replayability computations ─────────────────────────────────────────────
+
+  // Cook streak — count consecutive unique days cooked ending today or yesterday
+  const uniqueCookDates = [...new Set(
+    cookedEntries.map((e) => {
+      const d = e.cookedAt instanceof Date ? e.cookedAt : new Date(e.cookedAt)
+      return d.toISOString().split('T')[0]
+    })
+  )].sort((a, b) => b.localeCompare(a)) // most recent first
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1)
+  const yesterdayStr = yestDate.toISOString().split('T')[0]
+
+  let cookStreak = 0
+  if (uniqueCookDates.length > 0 && (uniqueCookDates[0] === todayStr || uniqueCookDates[0] === yesterdayStr)) {
+    cookStreak = 1
+    for (let i = 1; i < uniqueCookDates.length; i++) {
+      const prev = new Date(uniqueCookDates[i - 1])
+      const curr = new Date(uniqueCookDates[i])
+      const diffDays = Math.round((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24))
+      if (diffDays === 1) { cookStreak++ } else { break }
+    }
+  }
+
+  // Heatmap data — date string → cook count
+  const heatmapData: Record<string, number> = {}
+  for (const e of cookedEntries) {
+    const d = e.cookedAt instanceof Date ? e.cookedAt : new Date(e.cookedAt)
+    const key = d.toISOString().split('T')[0]
+    heatmapData[key] = (heatmapData[key] ?? 0) + 1
+  }
+
+  // House favourites — recipes cooked 2+ times, sorted by frequency
+  const cookFreq = new Map<string, number>()
+  for (const e of cookedEntries) cookFreq.set(e.recipeId, (cookFreq.get(e.recipeId) ?? 0) + 1)
+  const houseFavourites = cookedRecipes
+    .filter((r) => (cookFreq.get(r.id) ?? 0) >= 2)
+    .sort((a, b) => (cookFreq.get(b.id) ?? 0) - (cookFreq.get(a.id) ?? 0))
+    .slice(0, 3)
+
+  // Week plan — how many plan recipes were cooked this week
+  const now = new Date()
+  const nowDay = now.getDay()
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - nowDay + (nowDay === 0 ? -6 : 1))
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const cookedThisWeekIds = new Set(
+    cookedEntries
+      .filter((e) => {
+        const d = e.cookedAt instanceof Date ? e.cookedAt : new Date(e.cookedAt)
+        return d >= weekStart && d < weekEnd
+      })
+      .map((e) => e.recipeId)
+  )
+  const weekPlanCookedCount = weekPlanIds.filter((id) => cookedThisWeekIds.has(id)).length
+
   // Split authored recipes by status
   const published = myRecipes.filter((r) => r.status === 'published')
   const drafts     = myRecipes.filter((r) => r.status === 'draft')
@@ -232,18 +289,30 @@ export default async function ProfilePage({
           <div className="space-y-10">
 
             {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {[
                 { label: 'Published', value: published.length },
                 { label: 'Saved',     value: savedRecipes.length },
                 { label: 'Cooked',    value: cookedEntries.length },
+                { label: cookStreak > 0 ? `${cookStreak === 1 ? '1 day' : `${cookStreak} days`}` : 'No streak', value: cookStreak > 0 ? '🔥' : '—', sub: 'streak' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-panel border border-line rounded-xl px-4 py-4 text-center">
-                  <p className="font-display text-2xl sm:text-3xl font-bold text-ink">{stat.value}</p>
+                  <p className={`font-display text-2xl sm:text-3xl font-bold ${stat.sub === 'streak' && cookStreak > 0 ? 'text-ember' : 'text-ink'}`}>{stat.value}</p>
                   <p className="text-xs text-ink-ghost mt-1">{stat.label}</p>
                 </div>
               ))}
             </div>
+
+            {/* Milestone callout for notable streaks */}
+            {cookStreak >= 7 && (
+              <div className="flex items-center gap-3 bg-ember/8 border border-ember/20 rounded-xl px-4 py-3">
+                <span className="text-xl">{cookStreak >= 30 ? '🏆' : cookStreak >= 14 ? '🌟' : '🔥'}</span>
+                <div>
+                  <p className="text-sm font-semibold text-ink">{cookStreak}-day cooking streak!</p>
+                  <p className="text-xs text-ink-ghost">{cookStreak >= 30 ? 'An entire month. Remarkable.' : cookStreak >= 14 ? 'Two solid weeks. Keep it up.' : 'A full week in the kitchen.'}</p>
+                </div>
+              </div>
+            )}
 
             {/* This week's nutrition */}
             {(() => {
@@ -291,6 +360,44 @@ export default async function ProfilePage({
                 </div>
               )
             })()}
+
+            {/* House favourites */}
+            {houseFavourites.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">House favourites</h2>
+                    <p className="text-xs text-ink-ghost/70 mt-0.5">Recipes you keep coming back to</p>
+                  </div>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {houseFavourites.map((r) => (
+                    <Link key={r.id} href={`/recipe/${r.slug}`} className="group flex items-center gap-3 bg-panel border border-line hover:border-ember rounded-xl px-4 py-3 transition-colors">
+                      <div className={`w-10 h-10 flex-shrink-0 rounded-lg bg-gradient-to-br ${r.gradient} overflow-hidden`}>
+                        {r.imageUrl && <img src={r.imageUrl} alt="" className="w-full h-full object-cover" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-ink group-hover:text-ember transition-colors truncate leading-snug">{r.title}</p>
+                        <p className="text-xs text-ember mt-0.5">Cooked {cookFreq.get(r.id)}×</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Activity heatmap */}
+            {Object.keys(heatmapData).length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">Cooking activity</h2>
+                  <span className="text-xs text-ink-ghost">Past year</span>
+                </div>
+                <div className="bg-panel border border-line rounded-xl p-4">
+                  <CookHeatmap data={heatmapData} />
+                </div>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div>
@@ -558,6 +665,7 @@ export default async function ProfilePage({
             initialGroceryList={profile?.groceryList ?? ''}
             overlaps={weekPlanOverlaps}
             fridgeIngredients={fridgeIngredients}
+            cookedThisWeekIds={[...cookedThisWeekIds]}
           />
         )}
 

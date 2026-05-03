@@ -1,7 +1,26 @@
 import { Navbar } from '@/components/navbar'
 import { AIChat } from '@/components/ai-chat'
+import { getAllRecipes } from '@/lib/queries'
 
-export default function AIPage() {
+export default async function AIPage() {
+  const allRecipes = await getAllRecipes()
+
+  // Slim map: slug → preview data (title, image, gradient, first 8 ingredients)
+  const recipeMap: Record<string, { title: string; slug: string; imageUrl: string | null; gradient: string; cuisine: string; totalTime: string; ingredients: string[] }> = {}
+  for (const r of allRecipes) {
+    const groups = r.ingredients as { group: string; items: string[] }[]
+    const items = groups.flatMap((g) => g.items).slice(0, 8)
+    recipeMap[r.slug] = {
+      title: r.title,
+      slug: r.slug,
+      imageUrl: r.imageUrl ?? null,
+      gradient: r.gradient,
+      cuisine: r.cuisine,
+      totalTime: r.totalTime,
+      ingredients: items,
+    }
+  }
+
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
@@ -33,7 +52,7 @@ export default function AIPage() {
           ))}
         </div>
 
-        <AIChat />
+        <AIChat recipeMap={recipeMap} />
       </div>
 
       <footer className="border-t border-line bg-panel">

@@ -575,8 +575,8 @@ export function AdminGenerator() {
                     <div className={`rounded-lg border ${borderColor} ${bgColor} p-4 space-y-3`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400">QA Review</p>
-                          <span className="text-xs text-ink-ghost border border-line rounded px-1.5 py-0.5">Sanity check</span>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-red-400">Cultural Review</p>
+                          <span className="text-xs text-ink-ghost border border-line rounded px-1.5 py-0.5">Soren · Authenticity</span>
                         </div>
                         <VerdictBadge verdict={critic?.verdict ?? 'pass'} />
                       </div>
@@ -595,7 +595,7 @@ export function AdminGenerator() {
                         </div>
                       )}
                       {!hasIssues && critic?.verdict === 'pass' && (
-                        <p className="text-xs text-green-400/80 border border-green-500/20 rounded px-3 py-1.5">QA passed — no real-world problems found.</p>
+                        <p className="text-xs text-green-400/80 border border-green-500/20 rounded px-3 py-1.5">Cultural review passed — no authenticity issues found.</p>
                       )}
                       {(hasIssues || critic?.verdict !== 'pass') && (
                         <div className="pt-1 border-t border-line/50 flex items-center justify-between gap-3">

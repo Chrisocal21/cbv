@@ -189,12 +189,25 @@ export function ExploreFilters({
         </div>
       </div>
 
-      {/* Results */}
-      <div>
-        <p className="text-sm text-ink-ghost mb-6">
+      {/* Results header */}
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-sm text-ink-ghost">
           {filtered.length} {filtered.length === 1 ? 'recipe' : 'recipes'}
         </p>
-        {filtered.length === 0 ? (
+        {filtered.length > 1 && (
+          <a
+            href={`/recipe/${filtered[Math.floor(Math.random() * filtered.length)].slug}`}
+            className="inline-flex items-center gap-2 text-xs font-medium border border-line hover:border-ember text-ink-ghost hover:text-ember px-4 py-2 rounded-full transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Surprise me
+          </a>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
           <div className="text-center py-20 text-ink-ghost">
             <p className="text-lg font-display">No recipes match those filters.</p>
             <button
@@ -277,7 +290,6 @@ export function ExploreFilters({
             )}
           </>
         )}
-      </div>
     </div>
   )
 }

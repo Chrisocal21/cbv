@@ -144,6 +144,7 @@ export const cookedLog = pgTable('cooked_log', {
   cookedAt: timestamp('cooked_at').notNull().defaultNow(),
   servings: integer('servings').notNull().default(1),
   notes: text('notes').default(''),
+  rating: integer('rating'),  // 1 = thumbs up, -1 = thumbs down, null = unrated
 })
 
 // ─── Notifications ────────────────────────────────────────────────────────────

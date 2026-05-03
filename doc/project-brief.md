@@ -33,6 +33,7 @@ Cookbookverse is neither. It's the difference between a grocery store and a grea
 | **Warm, not clinical** | The aesthetic, tone, and UX should feel human, inviting, and a little editorial |
 | **Day and night ready** | No eye-burning whites, no crushing blacks — a palette that works beautifully in both modes |
 | **Broad audience, consistent experience** | Whether you're a beginner or a serious cook, the platform meets you where you are |
+| **Replayable by design** | Cooking actions accumulate into a personal culinary identity — streaks, favourites, taste profile — that makes the platform more valuable the more you use it |
 
 ---
 
@@ -60,8 +61,9 @@ You land on Cookbookverse. No account required. You're immediately in the world 
 - **Not a feed** — no infinite scroll of other people's food photos with captions
 - **Not a database** — curated, editorial, with personality and point of view
 - **AI that does something real** — generate from ingredients, match to mood/craving, adapt to dietary needs — all three, user's choice
-- **Quality gate on submissions** — every submission runs through a "Court of Chefs" — three AI judges (technique, flavour, home cook) reviewing sequentially before a human admin ever sees it
+- **Quality gate on submissions** — every submission runs through a "Court of Chefs" — Marco (technique), Céleste (flavour), Nadia (home cook), Soren (cultural authenticity) — reviewing in a single consolidated pass before a human admin ever sees it
 - **Aesthetic that works** — day/night usability, terracotta warmth, nothing that looks like a dev built it on a weekend
+- **Replayable by design** — cook streaks, activity history, "house favourite" signals, and ratings after cooking all compound over time into a genuine culinary identity for each user
 
 ---
 

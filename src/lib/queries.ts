@@ -217,6 +217,18 @@ export async function getRecipeCookCount(recipeId: string): Promise<number> {
   return rows[0]?.total ?? 0
 }
 
+/** Times a specific recipe was cooked in the current calendar month */
+export async function getRecipeMonthCookCount(recipeId: string): Promise<number> {
+  const monthStart = new Date()
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
+  const rows = await db
+    .select({ total: count() })
+    .from(cookedLog)
+    .where(and(eq(cookedLog.recipeId, recipeId), gte(cookedLog.cookedAt, monthStart)))
+  return rows[0]?.total ?? 0
+}
+
 /** Published variations of a recipe (recipes where parentId = recipeId) */
 export async function getRecipeVariations(recipeId: string): Promise<RecipeRow[]> {
   return db

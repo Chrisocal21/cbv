@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
-import { getAllRecipes, getRecipeBySlug, getUserProfile, getRecipeCookCount, getRecipeVariations, getUserById } from '@/lib/queries'
+import { getAllRecipes, getRecipeBySlug, getUserProfile, getRecipeCookCount, getRecipeMonthCookCount, getRecipeVariations, getUserById } from '@/lib/queries'
 import { db } from '@/lib/db'
 import { recipes as recipesTable } from '@/lib/db/schema'
 import { eq, sql } from 'drizzle-orm'
@@ -11,6 +11,7 @@ import { NutritionPanel } from '@/components/nutrition-panel'
 import { VariationButton } from '@/components/variation-button'
 import { IngredientsPanel } from '@/components/ingredients-panel'
 import { CookedItButton } from '@/components/cooked-it-button'
+import { CookMode } from '@/components/cook-mode'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 import { normalizeIngredient, computeOverlaps, type IngredientGroup } from '@/lib/ingredients'
 
@@ -70,10 +71,11 @@ export default async function RecipePage({
       .catch(() => {}) // non-blocking, ignore errors
   }
 
-  const [allRecipes, profile, cookCount, variations, recipeAuthor] = await Promise.all([
+  const [allRecipes, profile, cookCount, monthCookCount, variations, recipeAuthor] = await Promise.all([
     getAllRecipes(),
     userId ? getUserProfile(userId) : null,
     recipe.status === 'published' ? getRecipeCookCount(recipe.id) : Promise.resolve(0),
+    recipe.status === 'published' ? getRecipeMonthCookCount(recipe.id) : Promise.resolve(0),
     recipe.status === 'published' ? getRecipeVariations(recipe.id) : Promise.resolve([]),
     // Fetch human author if present and not a staff recipe
     recipe.authorId && !recipe.staffAuthor ? getUserById(recipe.authorId) : Promise.resolve(undefined),
@@ -176,6 +178,11 @@ export default async function RecipePage({
               <span className="flex items-center gap-1.5 text-sm text-ink-ghost">
                 <svg className="w-3.5 h-3.5 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 10.608v2.513M15 19.128v-.003c0-1.113-.425-2.188-1.184-2.995a3.75 3.75 0 00-2.816-1.253 3.75 3.75 0 00-2.816 1.253C7.425 16.94 7 18.015 7 19.128v.003" /></svg>
                 {cookCount.toLocaleString()} {cookCount === 1 ? 'person has' : 'people have'} cooked this
+                {monthCookCount > 0 && (
+                  <span className="ml-1.5 text-xs text-ember/80 border border-ember/20 rounded-full px-2 py-0.5">
+                    {monthCookCount} this month
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -290,6 +297,13 @@ export default async function RecipePage({
             )}
             {userId && recipe.status === 'published' && (
               <CookedItButton recipeId={recipe.id} recipeSlug={recipe.slug} recipeTitle={recipe.title} />
+            )}
+            {recipe.status === 'published' && (
+              <CookMode
+                recipeSlug={recipe.slug}
+                ingredients={recipe.ingredients as { group: string; items: string[] }[]}
+                steps={recipe.steps as { title: string; body: string }[]}
+              />
             )}
           </div>
         </div>

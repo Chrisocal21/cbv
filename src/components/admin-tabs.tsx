@@ -10,8 +10,9 @@ import { AdminPublishedRecipes } from './admin-published-recipes'
 import { AdminCollections } from './admin-collections'
 import { AdminSettings } from './admin-settings'
 import { PromptTuner } from './prompt-tuner'
+import { PipelineViewer } from './pipeline-viewer'
 
-type Tab = 'overview' | 'generate' | 'review' | 'published' | 'collections' | 'settings'
+type Tab = 'overview' | 'generate' | 'review' | 'published' | 'collections' | 'pipeline' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview',     label: 'Overview' },
@@ -19,6 +20,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'review',       label: 'Review' },
   { id: 'published',    label: 'Published' },
   { id: 'collections',  label: 'Collections' },
+  { id: 'pipeline',     label: 'Pipeline' },
   { id: 'settings',     label: 'Settings' },
 ]
 
@@ -60,7 +62,7 @@ export function AdminTabs({
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex items-center gap-0 border-b border-line mb-8 overflow-x-auto">
+      <div className="flex items-center gap-0 border-b border-line mb-8 overflow-x-auto scrollbar-none">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -115,6 +117,8 @@ export function AdminTabs({
           <AdminCollections initialCollections={collections} />
         </>
       )}
+
+      {tab === 'pipeline' && <PipelineViewer />}
 
       {tab === 'settings' && (
         <div className="space-y-4">

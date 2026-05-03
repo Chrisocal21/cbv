@@ -98,22 +98,71 @@ export async function POST(req: NextRequest) {
     generationTask,
     `${RECIPE_FORMAT}\n\nGradient options: ${gradientOptions}`,
   )
-  const generation = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.8,
-    max_tokens: 2000,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: generationSystem },
-      { role: 'user', content: prompt },
-    ],
-  })
+
+  let generation
+  try {
+    generation = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0.8,
+      max_tokens: 2000,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: generationSystem },
+        { role: 'user', content: prompt },
+      ],
+    })
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status
+    if (status === 429) {
+      return NextResponse.json({ error: 'OpenAI quota exceeded — check your billing at platform.openai.com' }, { status: 503 })
+    }
+    throw err
+  }
 
   const recipeData = JSON.parse(generation.choices[0]?.message?.content ?? '{}')
 
-  // Theo writes the origin story if the initial generation didn't produce one
-  // (or produced a generic/short placeholder). This runs fast — max 200 tokens.
-  if (!recipeData.originStory || recipeData.originStory.trim().length < 60) {
+  // ── Step 2: Court review (runs in parallel internally) ────────────────────
+  const report = await runCourtReview(recipeData)
+
+  // ── Step 3: Auto-revision pass ────────────────────────────────────────────
+  // If the court recommends revisions, fix the recipe NOW before saving —
+  // so what lands in the DB is already the best version.
+  let finalRecipe = recipeData
+  if (report.synthesis.recommendedAction === 'revise') {
+    // Collect all flagged issues across judges into one consolidated list
+    const allIssues: string[] = [
+      ...((report.critic.verdict !== 'pass' && report.critic.issues?.length) ? report.critic.issues : []),
+      ...(report.technique.verdict !== 'pass' ? [report.technique.notes] : []),
+      ...(report.flavour.verdict !== 'pass' ? [report.flavour.notes] : []),
+      ...(report.homecook.verdict !== 'pass' ? [report.homecook.notes] : []),
+    ].filter(Boolean)
+
+    if (allIssues.length > 0) {
+      try {
+        const issuesList = allIssues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')
+        const revisionResult = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          temperature: 0.4,
+          max_tokens: 3000,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: buildStaffPrompt(staffAuthor ?? 'marco', 'apply-critic') },
+            {
+              role: 'user',
+              content: `Recipe:\n${JSON.stringify(recipeData, null, 2)}\n\nQA reviewer notes:\n${report.synthesis.synthesisNotes}\n\nSpecific issues to fix:\n${issuesList}`,
+            },
+          ],
+        })
+        const revised = JSON.parse(revisionResult.choices[0]?.message?.content ?? '{}')
+        if (revised.title) finalRecipe = revised
+      } catch {
+        // Non-fatal — if revision fails, proceed with original draft
+      }
+    }
+  }
+
+  // ── Step 4: Theo writes origin story if missing ───────────────────────────
+  if (!finalRecipe.originStory || finalRecipe.originStory.trim().length < 60) {
     try {
       const originSystem = buildStaffPrompt('theo', 'origin-story')
       const originResult = await openai.chat.completions.create({
@@ -124,19 +173,19 @@ export async function POST(req: NextRequest) {
           { role: 'system', content: originSystem },
           {
             role: 'user',
-            content: `Write a 2–3 sentence origin story for this recipe:\nTitle: ${recipeData.title}\nCuisine: ${recipeData.cuisine}\nDescription: ${recipeData.description}`,
+            content: `Write a 2–3 sentence origin story for this recipe:\nTitle: ${finalRecipe.title}\nCuisine: ${finalRecipe.cuisine}\nDescription: ${finalRecipe.description}`,
           },
         ],
       })
       const originText = originResult.choices[0]?.message?.content?.trim()
-      if (originText) recipeData.originStory = originText
+      if (originText) finalRecipe.originStory = originText
     } catch {
       // Non-fatal — proceed without origin story if Theo's call fails
     }
   }
 
   // Build slug from title
-  const slug = recipeData.title
+  const slug = finalRecipe.title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
@@ -146,27 +195,27 @@ export async function POST(req: NextRequest) {
   const recipeId = randomUUID()
   const submissionId = randomUUID()
 
-  // Step 2: Save recipe to DB
+  // ── Step 5: Save the finished recipe to DB ────────────────────────────────
   await db.insert(recipes).values({
     id: recipeId,
     slug,
-    title: recipeData.title,
-    subtitle: recipeData.subtitle ?? '',
-    description: recipeData.description ?? '',
-    collection: recipeData.collection,
-    cuisine: recipeData.cuisine ?? '',
-    difficulty: recipeData.difficulty,
-    prepTime: recipeData.prepTime ?? '',
-    cookTime: recipeData.cookTime ?? '',
-    totalTime: recipeData.totalTime ?? '',
-    servings: recipeData.servings ?? '',
-    moodTags: recipeData.moodTags ?? [],
-    dietaryTags: recipeData.dietaryTags ?? [],
-    ingredients: recipeData.ingredients ?? [],
-    steps: recipeData.steps ?? [],
-    nutrition: recipeData.nutrition ?? { calories: 0, protein: '0g', carbs: '0g', fat: '0g', fiber: '0g' },
-    originStory: recipeData.originStory ?? '',
-    gradient: recipeData.gradient ?? GRADIENTS[0],
+    title: finalRecipe.title,
+    subtitle: finalRecipe.subtitle ?? '',
+    description: finalRecipe.description ?? '',
+    collection: finalRecipe.collection,
+    cuisine: finalRecipe.cuisine ?? '',
+    difficulty: finalRecipe.difficulty,
+    prepTime: finalRecipe.prepTime ?? '',
+    cookTime: finalRecipe.cookTime ?? '',
+    totalTime: finalRecipe.totalTime ?? '',
+    servings: finalRecipe.servings ?? '',
+    moodTags: finalRecipe.moodTags ?? [],
+    dietaryTags: finalRecipe.dietaryTags ?? [],
+    ingredients: finalRecipe.ingredients ?? [],
+    steps: finalRecipe.steps ?? [],
+    nutrition: finalRecipe.nutrition ?? { calories: 0, protein: '0g', carbs: '0g', fat: '0g', fiber: '0g' },
+    originStory: finalRecipe.originStory ?? '',
+    gradient: finalRecipe.gradient ?? GRADIENTS[0],
     status: 'pending_review',
     aiGenerated: true,
     authorId: null,
@@ -174,10 +223,7 @@ export async function POST(req: NextRequest) {
     isFeatured: false,
   })
 
-  // Step 3: Run Court of Chefs review
-  const report = await runCourtReview(recipeData)
-
-  // Step 4: Save submission with verdicts
+  // ── Step 6: Save submission with review record ────────────────────────────
   await db.insert(submissions).values({
     id: submissionId,
     recipeId,
@@ -213,7 +259,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    recipe: { ...recipeData, id: recipeId, slug },
+    recipe: { ...finalRecipe, id: recipeId, slug },
     submissionId,
     report,
     attributeTo: attributeTo ?? 'cookbookverse',

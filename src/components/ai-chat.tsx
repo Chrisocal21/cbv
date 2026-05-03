@@ -1,11 +1,21 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Fragment } from 'react'
 import { useUser } from '@clerk/nextjs'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+}
+
+type RecipePreview = {
+  title: string
+  slug: string
+  imageUrl: string | null
+  gradient: string
+  cuisine: string
+  totalTime: string
+  ingredients: string[]
 }
 
 type ActionStatus = 'idle' | 'saving' | 'submitting' | 'saved' | 'submitted' | 'error'
@@ -15,7 +25,88 @@ function looksLikeRecipe(content: string): boolean {
   return /ingredients/i.test(content) && /(instructions|method|steps|directions)/i.test(content)
 }
 
-export function AIChat() {
+/** Inline recipe card shown when the AI links to an existing recipe */
+function RecipeCard({ recipe }: { recipe: RecipePreview }) {
+  return (
+    <a
+      href={`/recipe/${recipe.slug}`}
+      className="group my-3 flex flex-col overflow-hidden rounded-2xl border border-ember/30 bg-panel hover:border-ember transition-all max-w-[340px] no-underline"
+    >
+      {/* Image */}
+      <div className={`relative h-40 overflow-hidden ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+        {recipe.imageUrl && (
+          <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <p className="text-white font-display font-bold text-base leading-tight">{recipe.title}</p>
+          <p className="text-white/70 text-xs mt-0.5">{recipe.cuisine} · {recipe.totalTime}</p>
+        </div>
+      </div>
+      {/* Ingredients preview */}
+      <div className="p-3">
+        <p className="text-[11px] font-semibold tracking-widest uppercase text-ink-ghost mb-2">Ingredients</p>
+        <div className="flex flex-wrap gap-1.5">
+          {recipe.ingredients.map((ing) => (
+            <span key={ing} className="text-[11px] px-2 py-0.5 rounded-full bg-page border border-line text-ink-dim">{ing}</span>
+          ))}
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-ember text-white font-medium">View full recipe →</span>
+        </div>
+      </div>
+    </a>
+  )
+}
+
+/** Render inline markdown: **bold** and [Title](/recipe/slug) — recipe links become preview cards */
+function renderInline(text: string, recipeMap: Record<string, RecipePreview>): React.ReactNode[] {
+  const pattern = /(\*\*[^*]+\*\*|\[[^\]]+\]\(\/recipe\/[^)]+\))/g
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index))
+    const token = match[0]
+    if (token.startsWith('**')) {
+      parts.push(<strong key={match.index} className="font-semibold text-ink">{token.slice(2, -2)}</strong>)
+    } else {
+      const lm = token.match(/\[([^\]]+)\]\((\/recipe\/([^)]+))\)/)
+      if (lm) {
+        const slug = lm[3]
+        const recipe = recipeMap[slug]
+        if (recipe) {
+          parts.push(<RecipeCard key={match.index} recipe={recipe} />)
+        } else {
+          // Fallback inline link if slug not in map
+          parts.push(
+            <a key={match.index} href={lm[2]} className="text-ember underline hover:text-ember-deep">{lm[1]}</a>
+          )
+        }
+      }
+    }
+    lastIndex = match.index + token.length
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex))
+  return parts
+}
+
+function renderMessageContent(content: string, recipeMap: Record<string, RecipePreview>): React.ReactNode {
+  return content.split('\n\n').map((para, pi) => {
+    const lines = para.split('\n')
+    return (
+      <p key={pi} className={pi > 0 ? 'mt-3' : ''}>
+        {lines.map((line, li) => (
+          <Fragment key={li}>
+            {li > 0 && <br />}
+            {renderInline(line, recipeMap)}
+          </Fragment>
+        ))}
+      </p>
+    )
+  })
+}
+
+export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePreview> }) {
   const { isSignedIn } = useUser()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -146,7 +237,7 @@ export function AIChat() {
   return (
     <div className="border border-line rounded-2xl bg-panel overflow-hidden">
       {/* Messages */}
-      <div className="min-h-[320px] max-h-[520px] overflow-y-auto p-6 space-y-5">
+      <div className="min-h-[320px] max-h-[520px] overflow-y-auto scrollbar-thin p-6 space-y-5">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center py-12 text-center">
             <p className="text-ink-ghost text-sm">Start by asking anything.</p>
@@ -168,13 +259,13 @@ export function AIChat() {
               msg.role === 'user' ? 'items-end' : 'items-start'
             }`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                   msg.role === 'user'
-                    ? 'bg-ember text-white rounded-br-sm'
+                    ? 'bg-ember text-white rounded-br-sm whitespace-pre-wrap'
                     : 'bg-page border border-line text-ink rounded-bl-sm'
                 }`}
               >
-                {msg.content}
+                {msg.role === 'user' ? msg.content : renderMessageContent(msg.content, recipeMap)}
               </div>
               {msg.role === 'assistant' && !loading && looksLikeRecipe(msg.content) && (
                 <RecipeActions

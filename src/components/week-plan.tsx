@@ -21,9 +21,10 @@ interface Props {
   initialGroceryList: string
   overlaps: Record<string, string[]>
   fridgeIngredients: string[]
+  cookedThisWeekIds: string[]
 }
 
-export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeIngredients }: Props) {
+export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeIngredients, cookedThisWeekIds }: Props) {
   const router = useRouter()
   const [recipes, setRecipes] = useState<RecipeRow[]>(initialRecipes)
   const [groceryList, setGroceryList] = useState(initialGroceryList)
@@ -95,6 +96,9 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
   }
 
   const hasOverlaps = Object.keys(overlaps).length > 0
+  const cookedSet = new Set(cookedThisWeekIds)
+  const cookedCount = recipes.filter((r) => cookedSet.has(r.id)).length
+  const progressPct = recipes.length > 0 ? Math.round((cookedCount / recipes.length) * 100) : 0
 
   return (
     <div className="space-y-8">
@@ -110,6 +114,25 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
           >
             {clearLoading ? 'Clearing…' : 'Clear plan'}
           </button>
+        </div>
+      )}
+
+      {/* Progress */}
+      {recipes.length > 0 && (
+        <div className="bg-panel border border-line rounded-xl px-5 py-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost">This week</p>
+            <span className="text-xs text-ink-ghost">{cookedCount} of {recipes.length} cooked</span>
+          </div>
+          <div className="h-2 bg-line rounded-full overflow-hidden">
+            <div
+              className="h-full bg-ember rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          {cookedCount === recipes.length && recipes.length > 0 && (
+            <p className="text-xs text-green-400 mt-2">Full week done! 🎉</p>
+          )}
         </div>
       )}
 
@@ -153,17 +176,26 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
           )}
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recipes.map((r) => (
-            <div key={r.id} className="group rounded-xl border border-line bg-panel overflow-hidden">
+          {recipes.map((r) => {
+            const isCooked = cookedSet.has(r.id)
+            return (
+            <div key={r.id} className={`group rounded-xl border bg-panel overflow-hidden transition-colors ${isCooked ? 'border-green-500/30 bg-green-500/3' : 'border-line'}`}>
               <Link href={`/recipe/${r.slug}`}>
                 <div className={`h-24 bg-gradient-to-br ${r.gradient} relative`}>
                   {r.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.imageUrl} alt={r.title} className="w-full h-full object-cover" />
                   )}
+                  {isCooked && (
+                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
                 <div className="p-4 pb-2">
-                  <h3 className="font-display font-bold text-ink text-sm leading-snug group-hover:text-ember transition-colors line-clamp-2 mb-1">
+                  <h3 className={`font-display font-bold text-sm leading-snug line-clamp-2 mb-1 transition-colors ${isCooked ? 'text-ink-ghost line-through' : 'text-ink group-hover:text-ember'}`}>
                     {r.title}
                   </h3>
                   <p className="text-xs text-ink-ghost font-display italic line-clamp-1">{r.subtitle}</p>
@@ -187,7 +219,7 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 

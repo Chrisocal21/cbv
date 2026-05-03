@@ -1,5 +1,5 @@
 # Cookbookverse — State of the Build
-> Last updated: April 14, 2026
+> Last updated: May 2, 2026
 
 ---
 
@@ -16,8 +16,9 @@ A single-source-of-truth document that maps where the platform actually is, what
 | Phase 1 | MVP — the world opens | **100%** ✅ |
 | AI Staff | 5 personas, 55 skills + craft layer + chat routing | **100%** ✅ |
 | Admin Studio | Tabbed, navigable | **100%** ✅ |
-| Phase 2 | Community + personal kitchen layer | **55%** 🔄 |
-| Phase 3 | Intelligence layer | **15%** ⬜ |
+| Phase 2 | Community + personal kitchen layer | **75%** 🔄 |
+| Phase 3 | Intelligence layer | **80%** 🔄 |
+| Replayability | Cook streaks, heatmap, cook-again, ratings | **90%** 🔄 |
 | Infrastructure | R2 image storage migration | **0%** ⬜ |
 
 ---
@@ -108,7 +109,7 @@ The admin is now a clean tabbed interface. Six tabs:
 
 ---
 
-## Phase 2 — Community Layer — 20% 🔄
+## Phase 2 — Community Layer — 65% 🔄
 
 *Goal: Users feel like they belong to something, not just consume from it.*
 
@@ -120,13 +121,16 @@ The admin is now a clean tabbed interface. Six tabs:
 | Notification system | ✅ Done | `0010_notifications.sql` applied to Neon |
 | **Named user collections** | ✅ Done | Full CRUD API, profile Collections tab, UserCollections component |
 | **Smart week plan** | ✅ Done | DB schema, API routes, profile tab, recipe callouts, AI context, grocery list |
+| **Week plan completion flow** | ✅ Done | Progress bar + green checkmarks per recipe card |
+| **"Surprise me" on Explore** | ✅ Done | Random pick from current filtered set — respects active filters |
+| **"X cooked this month" on recipe pages** | ✅ Done | `getRecipeMonthCookCount` query, badge on recipe detail |
 | Public user profiles | ⬜ Not started | Data exists, mostly a display build |
 | Public collections (shareable cookbooks) | ⬜ Not started | Depends on named collections |
 | Comments on recipes | ⬜ Not started | Moderated, quality-first |
 
 ---
 
-## Phase 3 — Intelligence Layer — 15% 🔄
+## Phase 3 — Intelligence Layer — 35% 🔄
 
 *Goal: Cookbookverse learns what you love and surfaces things you didn't know you wanted.*
 
@@ -134,10 +138,28 @@ The admin is now a clean tabbed interface. Six tabs:
 |---------|--------|-------|
 | Fridge mode | ✅ Done | Built early in Phase 1 |
 | Recipe versioning / variations | ✅ Done | Built early in Phase 1 |
-| Personalized homepage | ⬜ Not started | Based on saves, dietary prefs, AI history |
+| Personalised homepage | ✅ Done | Score-weighted picks using saves, cook history, dietary prefs |
+| "Because you love X" reason labels | ✅ Done | Rendered under homepage personalised pick cards |
+| Fridge mode callout on homepage | ✅ Done | Banner for logged-in users with saved ingredients; links to /fridge |
+| Season-aware homepage section | ✅ Done | "Right now in [month]" — 6 recipes from moodTags, auto-rotates monthly |
+| Cook mode on recipe pages | ✅ Done | Full-screen overlay with ingredient checkboxes, step progress bar, localStorage |
 | Nutrition tracking | ⬜ Not started | Log what you cooked, see weekly summary |
-| "Because you saved X" recommendations | ⬜ Not started | Similarity-based |
+| "Because you saved X" recommendations | ✅ Done | Similarity scoring built into homepage logic |
 | Weekly email digest via Resend | ⬜ Not started | New recipes matching taste profile |
+
+---
+
+## Phase 4 — Replayability — 0% ⬜
+
+*Goal: Every cooking action feels meaningful. Users build a relationship with the platform, not just a history.*
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Cook streak + milestones | ✅ Done | Streak counter + 7/14/30-day milestone banner on profile home |
+| Activity heatmap | ✅ Done | `CookHeatmap` component — 52-week grid on profile home |
+| "Cook it again" signal | ✅ Done | Top 3 most-cooked recipes ("house favourites") on profile home |
+| Rate-on-cook micro-prompt | ✅ Done | Thumbs up/down after marking cooked; PATCH /api/user/cooked-log; migration applied |
+| Court of Chefs efficiency rewrite | ✅ Done | 5 calls → 2 calls; Soren as cultural judge; focused inline prompts |
 
 ---
 
@@ -145,7 +167,8 @@ The admin is now a clean tabbed interface. Six tabs:
 
 | Task | Status | Notes |
 |------|--------|-------|
-| ⚠️ Apply `0010_notifications.sql` to Neon DB | ⬜ Pending | Notifications 500 until done — do this first |
+| ~~Apply `0010_notifications.sql` to Neon DB~~ | ✅ Applied | |
+| ~~Apply `0015_cook_rating.sql` to Neon DB~~ | ✅ Applied | |
 | Migrate image storage: Vercel Blob → Cloudflare R2 | ⬜ Not started | Two files to change. Not urgent until library grows. |
 
 ---
@@ -181,7 +204,57 @@ Users can save recipes to a personal weekly plan. Platform surfaces ingredient o
 
 ---
 
-### 3. Public Collections — Phase 2 · Medium lift
+### 3. Court of Chefs Efficiency Rewrite — Phase 4 · High priority · Immediate token savings
+**Status:** ✅ Complete
+
+**Current problems:**
+- 5 API calls per generation (4 parallel + 1 synthesis)
+- Full recipe JSON sent 4 times (~600 tokens × 4)
+- Each judge pulls 1500+ token system prompt from staff.ts narrative backstory
+- Nadia holds two judge seats (homecook + critic) — overlapping coverage
+- Soren entirely absent despite having `review:cultural` skill defined
+- `review:cultural` (Theo) defined in staff.ts but never called
+
+**Plan:**
+- Call 1: Single `gpt-4o-mini` returns all 4 judge verdicts as one JSON (recipe sent once)
+- Call 2: Theo synthesis (unchanged)
+- 4 judges: Marco (technique), Céleste (flavour), Nadia (homecook), Soren (cultural)
+- Write focused 200-token criteria prompts directly in court-review.ts — not staff.ts megaprompts
+- Keep `report.critic` key name → frontend unchanged; internal judge changes to Soren cultural review
+
+**Build checklist:**
+- [x] Rewrite `src/lib/court-review.ts` — 2-call architecture, Soren as 4th judge
+- [x] Update `admin-generator.tsx` — renamed to "Cultural Review", `report.critic` key unchanged
+- [x] Update `submissions` table/existing row shape (critic key name unchanged, no migration needed)
+
+---
+
+### 4. Replayability Suite — Phase 4 · High leverage · Builds taste profile data
+**Status:** ✅ Complete
+
+**Build checklist:**
+- [x] **Cook streak** — streak counter + milestone banner on profile home
+- [x] **Activity heatmap** — `CookHeatmap` 52-week grid on profile home
+- [x] **"Cook it again" panel** — top 3 house favourites on profile home
+- [x] **Rate-on-cook** — thumbs up/down after CookedItButton; `rating` on `cookedLog`; migration applied
+- [x] **Week plan completion progress** — progress bar + cooked checkmarks on WeekPlan component
+
+---
+
+### 5. Discovery Enhancements — Phase 3 · Low-medium lift · High visitor value
+**Status:** ✅ Complete
+
+**Build checklist:**
+- [x] **"Surprise me" button** on Explore — random pick from current filtered set
+- [x] **Personalization reason labels** on homepage — "Because you love X" under personalised pick cards
+- [x] **Season-aware section** on homepage — "Right now in [month]" from moodTags, auto-rotates
+- [x] **Fridge mode callout** on homepage — banner for logged-in users with saved ingredients
+- [x] **"X cooked this month"** on recipe detail pages — badge from `getRecipeMonthCookCount`
+- [x] **Cook mode toggle** on recipe pages — full-screen overlay with checkboxes + progress
+
+---
+
+### 6. Public Collections — Phase 2 · Medium lift
 **Status:** ⬜ Not started · Depends on public user profiles
 
 ---

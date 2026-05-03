@@ -22,6 +22,10 @@ async function run() {
   await sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "week_plan" jsonb DEFAULT '[]'::jsonb NOT NULL`
   await sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "grocery_list" text DEFAULT '' NOT NULL`
   console.log('0014 week_plan: OK')
+
+  // 0015 — rating on cooked_log
+  await sql`ALTER TABLE "cooked_log" ADD COLUMN IF NOT EXISTS "rating" integer`
+  console.log('0015 cook_rating: OK')
 }
 
 run().catch(e => { console.error('FAIL:', e.message); process.exit(1) })

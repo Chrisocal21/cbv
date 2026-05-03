@@ -58,3 +58,19 @@ export async function DELETE(req: Request) {
 
   return NextResponse.json({ ok: true })
 }
+
+// PATCH /api/user/cooked-log  — update rating on a log entry
+export async function PATCH(req: Request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id, rating } = await req.json()
+  if (!id || (rating !== 1 && rating !== -1)) return NextResponse.json({ error: 'id and rating (1 or -1) required' }, { status: 400 })
+
+  const [row] = await db.select({ id: cookedLog.id, userId: cookedLog.userId }).from(cookedLog).where(eq(cookedLog.id, id)).limit(1)
+  if (!row || row.userId !== userId) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  await db.update(cookedLog).set({ rating }).where(eq(cookedLog.id, id))
+
+  return NextResponse.json({ ok: true })
+}

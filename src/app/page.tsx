@@ -87,6 +87,32 @@ export default async function HomePage() {
       .slice(0, 4)
   })()
 
+  // Fridge callout
+  const fridgeIngredients = profile?.fridgeIngredients ?? []
+
+  // Season-aware section — derive from current month + mood tags
+  const currentMonth = new Date().getMonth() // 0-indexed
+  const monthName = new Date().toLocaleString('en-GB', { month: 'long' })
+  const seasonMoods: string[][] = [
+    ['warming', 'comforting', 'hearty'],           // Jan
+    ['warming', 'comforting', 'slow-cook'],         // Feb
+    ['spring', 'fresh', 'light'],                   // Mar
+    ['spring', 'fresh', 'light'],                   // Apr
+    ['fresh', 'light', 'spring'],                   // May
+    ['fresh', 'light', 'grilling'],                 // Jun
+    ['summer', 'fresh', 'salad', 'grilling'],       // Jul
+    ['summer', 'fresh', 'cold'],                    // Aug
+    ['autumn', 'harvest', 'hearty'],                // Sep
+    ['autumn', 'harvest', 'comforting'],            // Oct
+    ['warming', 'cozy', 'hearty'],                  // Nov
+    ['warming', 'festive', 'holiday'],              // Dec
+  ]
+  const seasonTags = new Set(seasonMoods[currentMonth] ?? [])
+  const seasonalRecipes = allRecipes
+    .filter((r) => r.status === 'published' && (r.moodTags as string[]).some((t) => seasonTags.has(t.toLowerCase())))
+    .filter((r) => r.id !== featured?.id)
+    .slice(0, 6)
+
   return (
     <div className="min-h-screen bg-page">
       <Navbar />
@@ -122,6 +148,27 @@ export default async function HomePage() {
         {/* Today's Pick */}
         {featured && (
         <section className="mx-auto max-w-7xl px-6 mb-20">
+
+          {/* Fridge callout — logged-in users with ingredients saved */}
+          {userId && fridgeIngredients.length > 0 && (
+            <a
+              href="/fridge"
+              className="group flex items-center justify-between gap-4 mb-8 bg-panel border border-line hover:border-ember rounded-xl px-5 py-4 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-ember flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h12a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18v-2.25z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Cook from your fridge</p>
+                  <p className="text-xs text-ink-ghost">{fridgeIngredients.length} ingredient{fridgeIngredients.length !== 1 ? 's' : ''} saved — find recipes that match</p>
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-ink-ghost group-hover:text-ember transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </a>
+          )}
           <div className="rounded-2xl overflow-hidden border border-line bg-panel flex flex-col md:flex-row">
             <div className={`md:w-1/2 aspect-video md:aspect-auto relative min-h-64 overflow-hidden ${!featured.imageUrl ? `bg-gradient-to-br ${featured.gradient}` : ''}`}>
               {featured.imageUrl && (
@@ -211,6 +258,38 @@ export default async function HomePage() {
           </section>
         )}
 
+        {/* Right now — season-aware section */}
+        {seasonalRecipes.length >= 3 && (
+          <section className="mx-auto max-w-7xl px-6 mb-20">
+            <div className="flex items-baseline justify-between mb-6">
+              <div>
+                <h2 className="font-display text-2xl font-bold text-ink">Right now in {monthName}</h2>
+                <p className="text-sm text-ink-ghost mt-1">What cooks are reaching for this time of year</p>
+              </div>
+              <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">See all</a>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {seasonalRecipes.map((recipe) => (
+                <a
+                  key={recipe.id}
+                  href={`/recipe/${recipe.slug}`}
+                  className="group rounded-xl overflow-hidden border border-line bg-panel hover:border-ember transition-all"
+                >
+                  <div className={`aspect-square overflow-hidden relative ${!recipe.imageUrl ? `bg-gradient-to-br ${recipe.gradient}` : ''}`}>
+                    {recipe.imageUrl && (
+                      <img src={recipe.imageUrl} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs font-semibold tracking-[0.1em] uppercase text-ink-ghost mb-1 truncate">{recipe.cuisine}</p>
+                    <h3 className="font-display text-sm font-bold text-ink group-hover:text-ember transition-colors leading-snug line-clamp-2">{recipe.title}</h3>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Picked for you */}
         {personalisedRecipes.length > 0 && (
           <section className="mx-auto max-w-7xl px-6 mb-20">
@@ -254,7 +333,7 @@ export default async function HomePage() {
                       )}
                     </div>
                     {reason && (
-                      <p className="text-xs text-ember/80 mt-1.5 capitalize">{reason}</p>
+                      <p className="text-xs text-ember/80 mt-1.5">Because you love {reason.toLowerCase()}</p>
                     )}
                   </div>
                 </a>
