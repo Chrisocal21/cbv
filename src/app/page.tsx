@@ -291,11 +291,11 @@ export default async function HomePage() {
                     {recipe.title}
                   </h3>
                   {recipe.staffAuthor && isStaffPersona(recipe.staffAuthor) ? (
-                    <a href={`/chef/${recipe.staffAuthor}`} onClick={(e) => e.stopPropagation()} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">by {STAFF_PERSONAS[recipe.staffAuthor].name}</a>
+                    <span className="text-xs text-ink-ghost mb-2 block">by {STAFF_PERSONAS[recipe.staffAuthor].name}</span>
                   ) : recipe.authorId && userAuthors[recipe.authorId] ? (
-                    <a href={`/chef/${userAuthors[recipe.authorId].username}`} onClick={(e) => e.stopPropagation()} className="text-xs text-ink-ghost hover:text-ember transition-colors mb-2 block">
+                    <span className="text-xs text-ink-ghost mb-2 block">
                       by {userAuthors[recipe.authorId].displayName ?? userAuthors[recipe.authorId].username}
-                    </a>
+                    </span>
                   ) : null}
                   <p className="text-sm text-ink-dim mb-4 leading-relaxed line-clamp-2">
                     {recipe.description}
