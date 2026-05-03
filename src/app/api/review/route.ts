@@ -100,8 +100,6 @@ export async function POST(req: NextRequest) {
   })
 }
 
-
-const JUDGES = [
   {
     name: 'technique',
     system: `You are the Technique Judge on the Court of Chefs — a panel that reviews recipe submissions for a curated food platform.
