@@ -60,8 +60,8 @@ You land on Cookbookverse. No account required. You're immediately in the world 
 
 - **Not a feed** — no infinite scroll of other people's food photos with captions
 - **Not a database** — curated, editorial, with personality and point of view
-- **AI that does something real** — generate from ingredients, match to mood/craving, adapt to dietary needs — all three, user's choice
-- **Quality gate on submissions** — every submission runs through a "Court of Chefs" — Marco (technique), Céleste (flavour), Nadia (home cook), Soren (cultural authenticity) — reviewing in a single consolidated pass before a human admin ever sees it
+- **AI that does something real** — generate from ingredients, match to mood/craving, adapt to dietary needs — and when it recommends an existing recipe, it shows a full preview card (photo, cuisine, time, ingredient list) you can click straight into
+- **Quality gate on submissions** — every submission runs through a "Court of Chefs" — Marco (technique), Céleste (flavour), Nadia (home cook), Soren (cultural authenticity) — reviewing in a single consolidated pass before a human admin ever sees it. Admin sees one synthesis verdict, not a four-panel breakdown.
 - **Aesthetic that works** — day/night usability, terracotta warmth, nothing that looks like a dev built it on a weekend
 - **Replayable by design** — cook streaks, activity history, "house favourite" signals, and ratings after cooking all compound over time into a genuine culinary identity for each user
 

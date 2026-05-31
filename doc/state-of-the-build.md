@@ -1,5 +1,5 @@
 # Cookbookverse — State of the Build
-> Last updated: May 2, 2026
+> Last updated: May 2, 2026 (evening session)
 
 ---
 
@@ -17,8 +17,8 @@ A single-source-of-truth document that maps where the platform actually is, what
 | AI Staff | 5 personas, 55 skills + craft layer + chat routing | **100%** ✅ |
 | Admin Studio | Tabbed, navigable | **100%** ✅ |
 | Phase 2 | Community + personal kitchen layer | **75%** 🔄 |
-| Phase 3 | Intelligence layer | **80%** 🔄 |
-| Replayability | Cook streaks, heatmap, cook-again, ratings | **90%** 🔄 |
+| Phase 3 | Intelligence layer | **90%** 🔄 |
+| Replayability | Cook streaks, heatmap, cook-again, ratings | **100%** ✅ |
 | Infrastructure | R2 image storage migration | **0%** ⬜ |
 
 ---
@@ -149,7 +149,7 @@ The admin is now a clean tabbed interface. Six tabs:
 
 ---
 
-## Phase 4 — Replayability — 0% ⬜
+## Phase 4 — Replayability — 100% ✅
 
 *Goal: Every cooking action feels meaningful. Users build a relationship with the platform, not just a history.*
 
@@ -160,6 +160,9 @@ The admin is now a clean tabbed interface. Six tabs:
 | "Cook it again" signal | ✅ Done | Top 3 most-cooked recipes ("house favourites") on profile home |
 | Rate-on-cook micro-prompt | ✅ Done | Thumbs up/down after marking cooked; PATCH /api/user/cooked-log; migration applied |
 | Court of Chefs efficiency rewrite | ✅ Done | 5 calls → 2 calls; Soren as cultural judge; focused inline prompts |
+| AI chat recipe preview cards | ✅ Done | Markdown recipe links render as full preview cards — photo, cuisine, time, ingredient chips |
+| Admin court report UI simplified | ✅ Done | 4-panel breakdown replaced with single synthesis card + collapsible flag list |
+| AI chat scrollbar | ✅ Done | Custom 4px ember-tinted scrollbar matching design system |
 
 ---
 
@@ -195,7 +198,7 @@ Users can save recipes to a personal weekly plan. Platform surfaces ingredient o
 ---
 
 ### 2. Public User Profiles — Phase 2 · Small-medium lift · High value
-**Status:** ⬜ Not started · Data already exists — this is mostly a display build
+**Status:** ⬜ Next up · Data already exists — this is mostly a display build
 
 **Build checklist:**
 - [ ] `GET /api/chef/[slug]` — public profile route
