@@ -155,6 +155,23 @@ export function Navbar() {
         <div className="flex items-center justify-around h-16 px-2">
           {MOBILE_NAV.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href))
+            
+            // For Profile link when not signed in, show sign-in button instead
+            if (item.href === '/profile' && !isSignedIn) {
+              return (
+                <SignInButton key={item.href} mode="modal">
+                  <button
+                    className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors min-w-0 ${
+                      isActive ? 'text-ember' : 'text-ink-ghost'
+                    }`}
+                  >
+                    {item.icon(isActive)}
+                    <span className="text-[10px] font-medium tracking-wide">Sign in</span>
+                  </button>
+                </SignInButton>
+              )
+            }
+            
             return (
               <Link
                 key={item.href}
