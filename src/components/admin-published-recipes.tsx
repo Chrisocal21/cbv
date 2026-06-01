@@ -40,6 +40,10 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   const [loadingEdit, setLoadingEdit] = useState(false)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
+  const [imageFilter, setImageFilter] = useState<'all' | 'with' | 'without'>('all')
+  const [featuredFilter, setFeaturedFilter] = useState<'all' | 'featured' | 'not-featured'>('all')
+  const [collectionFilter, setCollectionFilter] = useState<'all' | string>('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views' | 'saves' | 'title'>('newest')
   const [page, setPage] = useState(0)
   const [generatingImg, setGeneratingImg] = useState<string | null>(null)
   const [imgError, setImgError] = useState<string | null>(null)
@@ -47,6 +51,12 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   const [bulkRegen, setBulkRegen] = useState<{ done: number; total: number } | null>(null)
   const [theoTask, setTheoTask] = useState<string | null>(null)
   const [theoOutput, setTheoOutput] = useState<{ label: string; text: string } | null>(null)
+
+  const collections = useMemo(() => {
+    const seen = new Set<string>()
+    for (const r of recipes) if (r.collection) seen.add(r.collection)
+    return Array.from(seen).sort()
+  }, [recipes])
 
   const generateImage = async (id: string) => {
     setGeneratingImg(id)
@@ -88,15 +98,54 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
   }
 
   const filtered = useMemo(() => {
+    let result = recipes
+
+    // Text search
     const q = search.toLowerCase().trim()
-    if (!q) return recipes
-    return recipes.filter(
-      (r) =>
-        r.title.toLowerCase().includes(q) ||
-        r.collection.toLowerCase().includes(q) ||
-        r.cuisine.toLowerCase().includes(q)
-    )
-  }, [recipes, search])
+    if (q) {
+      result = result.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.collection.toLowerCase().includes(q) ||
+          r.cuisine.toLowerCase().includes(q)
+      )
+    }
+
+    // Image filter
+    if (imageFilter === 'with') {
+      result = result.filter((r) => r.imageUrl !== null)
+    } else if (imageFilter === 'without') {
+      result = result.filter((r) => r.imageUrl === null)
+    }
+
+    // Featured filter
+    if (featuredFilter === 'featured') {
+      result = result.filter((r) => r.isFeatured)
+    } else if (featuredFilter === 'not-featured') {
+      result = result.filter((r) => !r.isFeatured)
+    }
+
+    // Collection filter
+    if (collectionFilter !== 'all') {
+      result = result.filter((r) => r.collection === collectionFilter)
+    }
+
+    // Sort
+    const sorted = [...result]
+    if (sortBy === 'newest') {
+      sorted.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    } else if (sortBy === 'oldest') {
+      sorted.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    } else if (sortBy === 'views') {
+      sorted.sort((a, b) => b.viewCount - a.viewCount)
+    } else if (sortBy === 'saves') {
+      sorted.sort((a, b) => b.saveCount - a.saveCount)
+    } else if (sortBy === 'title') {
+      sorted.sort((a, b) => a.title.localeCompare(b.title))
+    }
+
+    return sorted
+  }, [recipes, search, imageFilter, featuredFilter, collectionFilter, sortBy])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -212,22 +261,73 @@ export function AdminPublishedRecipes({ initialRecipes }: { initialRecipes: Reci
 
   return (
     <div className="space-y-3">
-      {/* Search + count */}
-      <div className="flex items-center gap-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-          placeholder="Filter by title, collection, cuisine…"
-          className="flex-1 bg-panel border border-line rounded-lg px-4 py-2 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
-        />
-        <span className="text-xs text-ink-ghost whitespace-nowrap">
-          {filtered.length} of {recipes.length}
-        </span>
+      {/* Search + filters */}
+      <div className="space-y-3">
+        {/* Search bar */}
+        <div className="flex items-center gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+            placeholder="Search by title, collection, cuisine…"
+            className="flex-1 bg-panel border border-line rounded-lg px-4 py-2 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
+          />
+          <span className="text-xs text-ink-ghost whitespace-nowrap">
+            {filtered.length} of {recipes.length}
+          </span>
+        </div>
+
+        {/* Filter row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={imageFilter}
+            onChange={(e) => { setImageFilter(e.target.value as typeof imageFilter); setPage(0) }}
+            className="text-xs bg-panel border border-line rounded-lg px-3 py-1.5 text-ink focus:outline-none focus:border-ember"
+          >
+            <option value="all">All images</option>
+            <option value="with">Has image</option>
+            <option value="without">No image</option>
+          </select>
+
+          <select
+            value={featuredFilter}
+            onChange={(e) => { setFeaturedFilter(e.target.value as typeof featuredFilter); setPage(0) }}
+            className="text-xs bg-panel border border-line rounded-lg px-3 py-1.5 text-ink focus:outline-none focus:border-ember"
+          >
+            <option value="all">All recipes</option>
+            <option value="featured">Featured only</option>
+            <option value="not-featured">Not featured</option>
+          </select>
+
+          <select
+            value={collectionFilter}
+            onChange={(e) => { setCollectionFilter(e.target.value); setPage(0) }}
+            className="text-xs bg-panel border border-line rounded-lg px-3 py-1.5 text-ink focus:outline-none focus:border-ember"
+          >
+            <option value="all">All collections</option>
+            {collections.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+
+          <span className="text-xs text-ink-ghost mx-1">·</span>
+
+          <select
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value as typeof sortBy); setPage(0) }}
+            className="text-xs bg-panel border border-line rounded-lg px-3 py-1.5 text-ink focus:outline-none focus:border-ember"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="views">Most views</option>
+            <option value="saves">Most saves</option>
+            <option value="title">Title A-Z</option>
+          </select>
+        </div>
       </div>
 
       {/* Bulk regen controls */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap border-t border-line pt-3">
         <select
           value={imgMode}
           onChange={(e) => setImgMode(e.target.value as 'real' | 'expectation')}

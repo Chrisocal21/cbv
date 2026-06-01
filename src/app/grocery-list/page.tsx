@@ -1,80 +1,121 @@
-import { getRecipesBySlugs } from '@/lib/queries'
+import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
-import { GroceryListClient } from './grocery-list-client'
+import { MultiListGrocery } from '@/components/multi-list-grocery'
+import { FridgeMatchesSidebar } from '@/components/fridge-matches-sidebar'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
-export default async function GroceryListPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ recipes?: string }>
-}) {
-  const params = await searchParams
-  const slugs = (params.recipes ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 20) // cap at 20 recipes
+export const metadata: Metadata = {
+  title: 'Grocery list — Cookbookverse',
+  description: 'Add what you need and check it off as you shop.',
+}
 
-  const recipes = slugs.length > 0 ? await getRecipesBySlugs(slugs) : []
+type GroceryItem = { id: string; text: string; checked: boolean }
+type GroceryList = { id: string; name: string; items: GroceryItem[] }
 
-  // Merge all ingredients across recipes
-  type IngredientGroup = { group: string; items: string[] }
-  const mergedGroups = new Map<string, Set<string>>()
+function uid() {
+  return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
+}
 
-  for (const recipe of recipes) {
-    for (const group of recipe.ingredients as IngredientGroup[]) {
-      if (!mergedGroups.has(group.group)) mergedGroups.set(group.group, new Set())
-      for (const item of group.items) {
-        mergedGroups.get(group.group)!.add(item)
-      }
+export default async function FridgePage() {
+  const { userId } = await auth()
+  if (!userId) redirect('/')
+
+  // Try to fetch both groceryItems and groceryLists, but groceryLists might not exist yet
+  let groceryItems: GroceryItem[] = []
+  let groceryLists: GroceryList[] = []
+  
+  try {
+    const rows = await db
+      .select({ groceryItems: users.groceryItems, groceryLists: users.groceryLists })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    
+    if (rows.length === 0) {
+      // User doesn't exist yet, create with minimal fields
+      await db.insert(users).values({
+        id: userId,
+        role: 'user',
+        savedRecipes: [],
+        dietaryPreferences: [],
+        weekPlan: [],
+        groceryItems: [],
+        createdAt: new Date(),
+      }).onConflictDoNothing()
+    } else {
+      groceryItems = (rows[0]?.groceryItems as GroceryItem[]) ?? []
+      groceryLists = (rows[0]?.groceryLists as GroceryList[]) ?? []
+    }
+  } catch (e) {
+    // If groceryLists column doesn't exist yet, just fetch groceryItems
+    const rows = await db
+      .select({ groceryItems: users.groceryItems })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    
+    if (rows.length === 0) {
+      // User doesn't exist, create with minimal fields
+      await db.insert(users).values({
+        id: userId,
+        role: 'user',
+        savedRecipes: [],
+        dietaryPreferences: [],
+        weekPlan: [],
+        groceryItems: [],
+        createdAt: new Date(),
+      }).onConflictDoNothing()
+    } else {
+      groceryItems = (rows[0]?.groceryItems as GroceryItem[]) ?? []
+    }
+  }
+  
+  // Migration: if no lists but has old groceryItems, migrate them to first list
+  if (groceryLists.length === 0 && groceryItems.length > 0) {
+    groceryLists = [{ id: uid(), name: 'Main list', items: groceryItems }]
+    // Try to save migrated data (will fail if column doesn't exist, that's ok)
+    try {
+      await db.update(users).set({ groceryLists }).where(eq(users.id, userId))
+    } catch (e) {
+      // Column doesn't exist yet, that's fine
     }
   }
 
-  const groups = Array.from(mergedGroups.entries()).map(([group, items]) => ({
-    group,
-    items: Array.from(items),
-  }))
-
-  // Flat list for copy-to-clipboard (no groups)
-  const allItems = groups.flatMap((g) => g.items)
+  // For sidebar matches, collect all unchecked items from all lists
+  const allItems = groceryLists.flatMap((list) => list.items)
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="h-screen bg-page flex flex-col">
       <Navbar />
-      <div className="mx-auto max-w-2xl px-6 py-14">
-        <div className="mb-10">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-ember mb-3">
-            Shopping
-          </p>
-          <h1 className="font-display text-4xl font-bold text-ink mb-3">Grocery list</h1>
-          {recipes.length > 0 ? (
-            <p className="text-ink-dim text-lg">
-              {allItems.length} items from{' '}
-              {recipes.length === 1
-                ? `"${recipes[0].title}"`
-                : `${recipes.length} recipes`}
-            </p>
-          ) : (
-            <p className="text-ink-dim text-lg">No recipes selected.</p>
-          )}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Grocery lists (full width on mobile, left column on desktop) */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl px-6 py-12">
+            <header className="mb-8">
+              <h1 className="font-display text-4xl md:text-5xl font-bold text-ink leading-[1.05] mb-3">Grocery list</h1>
+              <p className="text-ink-dim text-base leading-relaxed max-w-md">
+                Add what you need and check it off as you shop. It saves on its own.
+              </p>
+            </header>
+            <MultiListGrocery initialLists={groceryLists} />
+            
+            {/* Mobile: Show matches inline below list */}
+            <div className="md:hidden mt-12">
+              <FridgeMatchesSidebar initialItems={allItems} mobile />
+            </div>
+          </div>
         </div>
 
-        {recipes.length > 0 && (
-          <GroceryListClient
-            groups={groups}
-            recipes={recipes.map((r) => ({ slug: r.slug, title: r.title }))}
-          />
-        )}
-
-        {recipes.length === 0 && (
-          <div className="text-center py-20 text-ink-ghost">
-            <svg className="w-10 h-10 mx-auto mb-4 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
-            <p className="text-sm">Head to your <a href="/profile?tab=saved" className="text-ember hover:underline">saved recipes</a> and generate a list from there.</p>
-          </div>
-        )}
+        {/* Right: Recipe matches sidebar (desktop only) */}
+        <div className="hidden md:block">
+          <FridgeMatchesSidebar initialItems={allItems} />
+        </div>
       </div>
     </div>
   )

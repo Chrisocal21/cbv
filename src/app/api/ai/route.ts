@@ -47,7 +47,7 @@ function routeChat(messages: { role: string; content: string }[]): StaffPersona 
 }
 
 export async function POST(req: Request) {
-  const { messages, dietaryPreferences, fridgeIngredients, weekPlanIds } = await req.json()
+  const { messages, dietaryPreferences, ingredients, weekPlanIds } = await req.json()
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('Invalid request', { status: 400 })
@@ -57,8 +57,8 @@ export async function POST(req: Request) {
     ? `\n\nUSER DIETARY PREFERENCES: ${dietaryPreferences.join(', ')}. Always respect these when suggesting or generating recipes. Mention them proactively if relevant.`
     : ''
 
-  const fridgeNote = Array.isArray(fridgeIngredients) && fridgeIngredients.length > 0
-    ? `\n\nUSER'S FRIDGE CONTENTS: ${fridgeIngredients.join(', ')}. When the user asks what they can make or doesn't specify ingredients, use these as the starting point. Mention them naturally — don't list them back robotically.`
+  const fridgeNote = Array.isArray(ingredients) && ingredients.length > 0
+    ? `\n\nUSER'S GROCERY LIST: ${ingredients.join(', ')}. When the user asks what they can make or doesn't specify ingredients, use these as the starting point. Mention them naturally — don't list them back robotically.`
     : ''
 
   const weekPlanNote = Array.isArray(weekPlanIds) && weekPlanIds.length > 0

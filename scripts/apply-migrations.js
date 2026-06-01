@@ -26,6 +26,14 @@ async function run() {
   // 0015 — rating on cooked_log
   await sql`ALTER TABLE "cooked_log" ADD COLUMN IF NOT EXISTS "rating" integer`
   console.log('0015 cook_rating: OK')
+
+  // 0016 — personal grocery checklist on users
+  await sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "grocery_items" jsonb DEFAULT '[]'::jsonb NOT NULL`
+  console.log('0016 grocery_items: OK')
+
+  // 0017 — multi-list grocery support
+  await sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "grocery_lists" jsonb DEFAULT '[]'::jsonb NOT NULL`
+  console.log('0017 grocery_lists: OK')
 }
 
 run().catch(e => { console.error('FAIL:', e.message); process.exit(1) })

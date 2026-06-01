@@ -6,6 +6,12 @@ import { eq, desc } from 'drizzle-orm'
 import { getAllCollections } from '@/lib/queries'
 import { Navbar } from '@/components/navbar'
 import { AdminTabs } from '@/components/admin-tabs'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Admin — Cookbookverse',
+  description: 'Manage recipes, review submissions, and organize collections.',
+}
 
 export default async function AdminPage() {
   const { userId } = await auth()
@@ -39,10 +45,10 @@ export default async function AdminPage() {
             Admin
           </p>
           <h1 className="font-display text-4xl font-bold text-ink mb-2">
-            Content Studio
+            Admin
           </h1>
           <p className="text-ink-dim">
-            Generate and publish recipes. Review pending submissions.
+            Manage recipes, review submissions, and organize collections.
           </p>
         </div>
 

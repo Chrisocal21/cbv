@@ -106,7 +106,7 @@ export function RecipeEditForm({ recipe }: { recipe: RecipeRow }) {
     })
 
     if (res.ok) {
-      router.push('/profile?tab=submissions')
+      router.push('/profile?tab=recipes')
     }
     setSubmitting(false)
   }

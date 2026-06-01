@@ -4,8 +4,14 @@ import { users } from '@/lib/db/schema'
 import { inArray } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
 import { ExploreFilters } from '@/components/explore-filters'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Explore — Cookbookverse',
+  description: 'Discover recipes from around the world.',
+}
 
 export default async function ExplorePage({
   searchParams,

@@ -2,26 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import type { CollectionRow } from '@/lib/queries'
-import { EllisDashboard } from './ellis-dashboard'
-import { RexMonitor } from './rex-monitor'
 import { AdminGenerator } from './admin-generator'
 import { AdminDashboard } from './admin-dashboard'
 import { AdminPublishedRecipes } from './admin-published-recipes'
 import { AdminCollections } from './admin-collections'
-import { AdminSettings } from './admin-settings'
-import { PromptTuner } from './prompt-tuner'
-import { PipelineViewer } from './pipeline-viewer'
 
-type Tab = 'overview' | 'generate' | 'review' | 'published' | 'collections' | 'pipeline' | 'settings'
+type Tab = 'published' | 'review' | 'generate' | 'collections'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'overview',     label: 'Overview' },
-  { id: 'generate',     label: 'Generate' },
-  { id: 'review',       label: 'Review' },
   { id: 'published',    label: 'Published' },
+  { id: 'review',       label: 'Review' },
+  { id: 'generate',     label: 'Generate' },
   { id: 'collections',  label: 'Collections' },
-  { id: 'pipeline',     label: 'Pipeline' },
-  { id: 'settings',     label: 'Settings' },
 ]
 
 type RecipeEntry = {
@@ -44,7 +36,7 @@ export function AdminTabs({
   published: RecipeEntry[]
   collections: CollectionRow[]
 }) {
-  const [tab, setTab] = useState<Tab>('overview')
+  const [tab, setTab] = useState<Tab>('published')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -79,32 +71,33 @@ export function AdminTabs({
       </div>
 
       {/* Panels */}
-      {tab === 'overview' && (
-        <div className="space-y-4">
-          <EllisDashboard />
-          <RexMonitor />
-        </div>
+      {tab === 'published' && (
+        <>
+          <div className="mb-6">
+            <h2 className="font-display text-xl font-bold text-ink mb-1">Published recipes</h2>
+            <p className="text-sm text-ink-ghost">Manage images, featured status, and visibility.</p>
+          </div>
+          <AdminPublishedRecipes initialRecipes={published} />
+        </>
       )}
-
-      {tab === 'generate' && <AdminGenerator />}
 
       {tab === 'review' && (
         <>
           <div className="mb-6">
-            <h2 className="font-display text-xl font-bold text-ink mb-1">Pending submissions</h2>
-            <p className="text-sm text-ink-ghost">User and generated recipes awaiting your decision.</p>
+            <h2 className="font-display text-xl font-bold text-ink mb-1">Review</h2>
+            <p className="text-sm text-ink-ghost">Approve or reject pending recipes.</p>
           </div>
           <AdminDashboard />
         </>
       )}
 
-      {tab === 'published' && (
+      {tab === 'generate' && (
         <>
           <div className="mb-6">
-            <h2 className="font-display text-xl font-bold text-ink mb-1">Published recipes</h2>
-            <p className="text-sm text-ink-ghost">Manage featured status and Today&apos;s Pick.</p>
+            <h2 className="font-display text-xl font-bold text-ink mb-1">Generate</h2>
+            <p className="text-sm text-ink-ghost">Create new recipes with AI assistance.</p>
           </div>
-          <AdminPublishedRecipes initialRecipes={published} />
+          <AdminGenerator />
         </>
       )}
 
@@ -112,19 +105,10 @@ export function AdminTabs({
         <>
           <div className="mb-6">
             <h2 className="font-display text-xl font-bold text-ink mb-1">Collections</h2>
-            <p className="text-sm text-ink-ghost">Manage collection names, descriptions, and gradients. Add new ones here.</p>
+            <p className="text-sm text-ink-ghost">Manage collection descriptions, gradients, and images.</p>
           </div>
           <AdminCollections initialCollections={collections} />
         </>
-      )}
-
-      {tab === 'pipeline' && <PipelineViewer />}
-
-      {tab === 'settings' && (
-        <div className="space-y-4">
-          <AdminSettings />
-          <PromptTuner />
-        </div>
       )}
     </div>
   )

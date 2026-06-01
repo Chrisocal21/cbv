@@ -43,7 +43,12 @@ export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
 
-  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  const rows = await db.select({
+    displayName: users.displayName,
+    bio: users.bio,
+    dietaryPreferences: users.dietaryPreferences,
+    username: users.username,
+  }).from(users).where(eq(users.id, userId)).limit(1)
   const user = rows[0]
 
   return NextResponse.json({

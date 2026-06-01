@@ -4,6 +4,9 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { inArray } from 'drizzle-orm'
 import { Navbar } from '@/components/navbar'
+import { HomeGrocery } from '@/components/home-grocery'
+import { TimeAwarePicks } from '@/components/time-aware-picks'
+import { PantryHeroCta } from '@/components/pantry-hero-cta'
 import { STAFF_PERSONAS, isStaffPersona } from '@/lib/staff'
 
 export const dynamic = 'force-dynamic'
@@ -87,8 +90,77 @@ export default async function HomePage() {
       .slice(0, 4)
   })()
 
-  // Fridge callout
-  const fridgeIngredients = profile?.fridgeIngredients ?? []
+  // Personal grocery checklist (homepage centerpiece) — multi-list support
+  type GroceryItem = { id: string; text: string; checked: boolean }
+  type GroceryList = { id: string; name: string; items: GroceryItem[] }
+  let groceryLists = (profile?.groceryLists as GroceryList[]) ?? []
+  
+  // Fallback: if no lists but old groceryItems exist, create a default list
+  if (groceryLists.length === 0) {
+    const oldItems = (profile?.groceryItems as GroceryItem[]) ?? []
+    if (oldItems.length > 0) {
+      groceryLists = [{ id: 'migrated', name: 'Main list', items: oldItems }]
+    }
+  }
+  
+  const allGroceryItems = groceryLists.flatMap(list => list.items ?? [])
+
+  // Signed-in greeting + at-a-glance stats
+  const firstName = (profile?.displayName ?? profile?.username ?? '').trim().split(' ')[0]
+  const hour = new Date().getHours()
+  const itemsToGet = allGroceryItems.filter((i) => !i.checked).length
+  const savedCount = profile?.savedRecipes?.length ?? 0
+  const weekPlanCount = profile?.weekPlan?.length ?? 0
+
+  // Warm, editorial welcome — reads like a market greeting, not a dashboard.
+  const welcomeHeading = firstName ? `Welcome back, ${firstName}` : 'Welcome back'
+  const welcomeTagline =
+    hour < 12
+      ? 'The kitchen\u2019s open — what are we making this morning?'
+      : hour < 18
+      ? 'Good to see you. Let\u2019s find something worth cooking.'
+      : 'Evening. Something good is always worth the effort.'
+
+  // A single warm recommendations row for signed-in users — personalised if we can,
+  // otherwise the freshest additions so the page always feels alive.
+  const recommendations = personalisedRecipes.length > 0
+    ? personalisedRecipes.map((p) => p.recipe)
+    : newAdditions
+
+  // Candidate pool for the time-aware picks row. Order matters: personalised
+  // first, then trending, then fresh — the client re-ranks by the viewer's
+  // local meal window and falls back to this order when nothing matches.
+  const pickPoolSource = [
+    ...recommendations,
+    ...trendingRecipes,
+    ...newAdditions,
+  ]
+  const seenPickIds = new Set<string>()
+  const timePickPool = pickPoolSource
+    .filter((r) => {
+      if (!r || seenPickIds.has(r.id)) return false
+      seenPickIds.add(r.id)
+      return true
+    })
+    .slice(0, 12)
+    .map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      title: r.title,
+      collection: r.collection,
+      totalTime: r.totalTime,
+      difficulty: r.difficulty,
+      imageUrl: r.imageUrl,
+      gradient: r.gradient,
+      moodTags: (r.moodTags as string[] | null) ?? [],
+      ingredients: ((r.ingredients as { group: string; items: string[] }[] | null) ?? [])
+        .flatMap((g) => g.items),
+    }))
+  const pickFallbackHeading = personalisedRecipes.length > 0 ? 'Picked for you' : 'Fresh from the kitchen'
+
+  // Ingredient names from the grocery list — used to boost recipes the user can
+  // mostly already make. Kept to non-empty, unchecked-or-checked text.
+  const groceryNames = allGroceryItems.map((i) => i.text).filter(Boolean)
 
   // Season-aware section — derive from current month + mood tags
   const currentMonth = new Date().getMonth() // 0-indexed
@@ -118,57 +190,79 @@ export default async function HomePage() {
       <Navbar />
 
       <main>
-        {/* Hero */}
-        <section className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-          <p className="text-xs font-semibold tracking-[0.2em] uppercase text-ember mb-6">
-            Discover something new
-          </p>
-          <h1 className="font-display text-5xl md:text-7xl font-bold text-ink leading-[1.08] mb-8 max-w-3xl">
-            A world of recipes worth making.
-          </h1>
-          <p className="text-lg text-ink-dim max-w-xl mb-12 leading-relaxed">
-            Not a database. Not a feed. A place you come to find something new and leave ready to cook.
-          </p>
-          <div className="flex items-center gap-4 flex-wrap">
-            <a
-              href="/explore"
-              className="inline-flex items-center px-6 py-3 rounded-full bg-ember text-white font-medium hover:bg-ember-deep transition-colors"
-            >
-              Start exploring
-            </a>
-            <a
-              href="/ai"
-              className="inline-flex items-center px-6 py-3 rounded-full border border-line text-ink font-medium hover:bg-panel transition-colors"
-            >
-              Ask the AI
-            </a>
-          </div>
-        </section>
+        {/* Grocery list centerpiece — the heart of the app */}
+        {userId ? (
+          <>
+          {/* Editorial masthead — reads like a magazine, not a dashboard */}
+          <section className="mx-auto max-w-2xl px-6 pt-12 pb-2">
+            <p className="text-xs font-semibold tracking-[0.25em] uppercase text-ember mb-3">
+              {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl font-bold text-ink leading-[1.05] mb-3">
+              {welcomeHeading}.
+            </h1>
+            <p className="text-lg text-ink-dim mb-5 leading-relaxed">{welcomeTagline}</p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm border-t border-line pt-4">
+              <a href="/grocery-list" className="group inline-flex items-baseline gap-1.5 text-ink-dim hover:text-ember transition-colors">
+                <span className="font-display font-bold text-ink group-hover:text-ember tabular-nums">{itemsToGet}</span>
+                <span>to buy</span>
+              </a>
+              <span className="text-line">·</span>
+              <a href="/profile?tab=saved" className="group inline-flex items-baseline gap-1.5 text-ink-dim hover:text-ember transition-colors">
+                <span className="font-display font-bold text-ink group-hover:text-ember tabular-nums">{savedCount}</span>
+                <span>saved</span>
+              </a>
+              <span className="text-line">·</span>
+              <a href="/profile?tab=this-week" className="group inline-flex items-baseline gap-1.5 text-ink-dim hover:text-ember transition-colors">
+                <span className="font-display font-bold text-ink group-hover:text-ember tabular-nums">{weekPlanCount}</span>
+                <span>this week</span>
+              </a>
+            </div>
+          </section>
+
+          {/* Grocery list */}
+          <HomeGrocery initialLists={groceryLists} itemsToGet={itemsToGet} />
+
+          {/* Time-aware picks — re-ranked by the viewer's local meal window */}
+          {timePickPool.length > 0 && (
+            <TimeAwarePicks pool={timePickPool} fallbackHeading={pickFallbackHeading} groceryItems={groceryNames} />
+          )}
+
+          {/* Explore CTA */}
+          <section className="mx-auto max-w-2xl px-6 pb-16">
+            <div className="mt-6 flex justify-center">
+              <a
+                href="/explore"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-ember text-white font-medium text-sm hover:bg-ember-deep transition-colors"
+              >
+                Explore more recipes
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
+          </section>
+          </>
+        ) : (
+          <>
+          <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-ember mb-5">
+              Cook from what you have
+            </p>
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-ink leading-[1.08] mb-6 max-w-3xl">
+              Tell us what&rsquo;s in your kitchen. We&rsquo;ll tell you what to cook.
+            </h1>
+            <p className="text-lg text-ink-dim max-w-xl mb-10 leading-relaxed">
+              Keep a living list of what you have at home. Cookbookverse matches it against a curated world of recipes — so dinner is never a guessing game.
+            </p>
+            <PantryHeroCta />
+          </section>
+
+        {/* ── The universe behind it ─────────────────────────────────────── */}
 
         {/* Today's Pick */}
         {featured && (
-        <section className="mx-auto max-w-7xl px-6 mb-20">
-
-          {/* Fridge callout — logged-in users with ingredients saved */}
-          {userId && fridgeIngredients.length > 0 && (
-            <a
-              href="/fridge"
-              className="group flex items-center justify-between gap-4 mb-8 bg-panel border border-line hover:border-ember rounded-xl px-5 py-4 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-ember flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h12a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18v-2.25z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Cook from your fridge</p>
-                  <p className="text-xs text-ink-ghost">{fridgeIngredients.length} ingredient{fridgeIngredients.length !== 1 ? 's' : ''} saved — find recipes that match</p>
-                </div>
-              </div>
-              <svg className="w-4 h-4 text-ink-ghost group-hover:text-ember transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
-            </a>
-          )}
+        <section className="mx-auto max-w-7xl px-6 mb-14">
           <div className="rounded-2xl overflow-hidden border border-line bg-panel flex flex-col md:flex-row">
             <div className={`md:w-1/2 aspect-video md:aspect-auto relative min-h-64 overflow-hidden ${!featured.imageUrl ? `bg-gradient-to-br ${featured.gradient}` : ''}`}>
               {featured.imageUrl && (
@@ -207,8 +301,8 @@ export default async function HomePage() {
         )}
 
         {/* Collections */}
-        <section className="mx-auto max-w-7xl px-6 mb-20">
-          <h2 className="font-display text-2xl font-bold text-ink mb-6">Browse by collection</h2>
+        <section className="mx-auto max-w-7xl px-6 mb-14">
+          <h2 className="font-display text-xl font-bold text-ink mb-4">Browse by collection</h2>
           <div className="flex gap-3 flex-wrap">
             {dbCollections.map((c) => (
               <a
@@ -224,11 +318,11 @@ export default async function HomePage() {
 
         {/* Trending this week */}
         {trendingRecipes.length > 0 && (
-          <section className="mx-auto max-w-7xl px-6 mb-20">
-            <div className="flex items-baseline justify-between mb-6">
+          <section className="mx-auto max-w-7xl px-6 mb-14">
+            <div className="flex items-baseline justify-between mb-5">
               <div>
-                <h2 className="font-display text-2xl font-bold text-ink">Trending this week</h2>
-                <p className="text-sm text-ink-ghost mt-1">What people are actually cooking</p>
+                <h2 className="font-display text-xl font-bold text-ink">Trending this week</h2>
+                <p className="text-sm text-ink-ghost mt-0.5">What people are actually cooking</p>
               </div>
               <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">See all</a>
             </div>
@@ -260,11 +354,11 @@ export default async function HomePage() {
 
         {/* Right now — season-aware section */}
         {seasonalRecipes.length >= 3 && (
-          <section className="mx-auto max-w-7xl px-6 mb-20">
-            <div className="flex items-baseline justify-between mb-6">
+          <section className="mx-auto max-w-7xl px-6 mb-14">
+            <div className="flex items-baseline justify-between mb-5">
               <div>
-                <h2 className="font-display text-2xl font-bold text-ink">Right now in {monthName}</h2>
-                <p className="text-sm text-ink-ghost mt-1">What cooks are reaching for this time of year</p>
+                <h2 className="font-display text-xl font-bold text-ink">Right now in {monthName}</h2>
+                <p className="text-sm text-ink-ghost mt-0.5">What cooks are reaching for this time of year</p>
               </div>
               <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">See all</a>
             </div>
@@ -292,11 +386,11 @@ export default async function HomePage() {
 
         {/* Picked for you */}
         {personalisedRecipes.length > 0 && (
-          <section className="mx-auto max-w-7xl px-6 mb-20">
-            <div className="flex items-baseline justify-between mb-6">
+          <section className="mx-auto max-w-7xl px-6 mb-14">
+            <div className="flex items-baseline justify-between mb-5">
               <div>
-                <h2 className="font-display text-2xl font-bold text-ink">Picked for you</h2>
-                <p className="text-sm text-ink-ghost mt-1">Based on your taste</p>
+                <h2 className="font-display text-xl font-bold text-ink">Picked for you</h2>
+                <p className="text-sm text-ink-ghost mt-0.5">Based on your taste</p>
               </div>
               <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">
                 See all
@@ -343,9 +437,9 @@ export default async function HomePage() {
         )}
 
         {/* New additions */}
-        <section className="mx-auto max-w-7xl px-6 mb-24">
-          <div className="flex items-baseline justify-between mb-6">
-            <h2 className="font-display text-2xl font-bold text-ink">New additions</h2>
+        <section className="mx-auto max-w-7xl px-6 mb-16">
+          <div className="flex items-baseline justify-between mb-5">
+            <h2 className="font-display text-xl font-bold text-ink">New additions</h2>
             <a href="/explore" className="text-sm text-ember hover:text-ember-deep transition-colors">
               See all
             </a>
@@ -398,6 +492,8 @@ export default async function HomePage() {
             ))}
           </div>
         </section>
+        </>
+        )}
       </main>
 
       <footer className="border-t border-line bg-panel">

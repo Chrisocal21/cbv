@@ -74,7 +74,24 @@ export type UserRow = InferSelectModel<typeof users>
 export type SubmissionRow = InferSelectModel<typeof submissions>
 
 export async function getUserProfile(userId: string): Promise<UserRow | undefined> {
-  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+      bio: users.bio,
+      role: users.role,
+      savedRecipes: users.savedRecipes,
+      dietaryPreferences: users.dietaryPreferences,
+      weekPlan: users.weekPlan,
+      groceryItems: users.groceryItems,
+      groceryLists: users.groceryLists,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
   return rows[0]
 }
 
@@ -186,8 +203,24 @@ export async function getPublishedRecipesByStaff(persona: string): Promise<Recip
 }
 
 /** Look up a user by their username (for public profile URLs) */
-export async function getUserByUsername(username: string): Promise<UserRow | undefined> {
-  const rows = await db.select().from(users).where(eq(users.username, username)).limit(1)
+export async function getUserByUsername(username: string): Promise<Omit<UserRow, 'groceryLists'> | undefined> {
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+      bio: users.bio,
+      role: users.role,
+      savedRecipes: users.savedRecipes,
+      dietaryPreferences: users.dietaryPreferences,
+      weekPlan: users.weekPlan,
+      groceryItems: users.groceryItems,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1)
   return rows[0]
 }
 

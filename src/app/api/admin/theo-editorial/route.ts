@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  const userRows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1)
   if (!userRows[0] || userRows[0].role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }

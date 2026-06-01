@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 async function requireAdmin() {
   const { userId } = await auth()
   if (!userId) return null
-  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+  const rows = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1)
   return rows[0]?.role === 'admin' ? userId : null
 }
 

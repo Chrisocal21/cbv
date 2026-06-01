@@ -18,18 +18,15 @@ type RecipeRow = {
 
 interface Props {
   initialRecipes: RecipeRow[]
-  initialGroceryList: string
   overlaps: Record<string, string[]>
-  fridgeIngredients: string[]
   cookedThisWeekIds: string[]
 }
 
-export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeIngredients, cookedThisWeekIds }: Props) {
+export function WeekPlan({ initialRecipes, overlaps, cookedThisWeekIds }: Props) {
   const router = useRouter()
   const [recipes, setRecipes] = useState<RecipeRow[]>(initialRecipes)
-  const [groceryList, setGroceryList] = useState(initialGroceryList)
   const [groceryLoading, setGroceryLoading] = useState(false)
-  const [groceryCopied, setGroceryCopied] = useState(false)
+  const [groceryAdded, setGroceryAdded] = useState<number | null>(null)
   const [clearLoading, setClearLoading] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
 
@@ -56,17 +53,17 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
     })
     if (res.ok) {
       setRecipes([])
-      setGroceryList('')
+      setGroceryAdded(null)
     }
     setClearLoading(false)
   }
 
-  async function generateGroceryList() {
+  async function addToGroceryList() {
     setGroceryLoading(true)
     const res = await fetch('/api/user/week-plan/grocery-list', { method: 'POST' })
     if (res.ok) {
       const data = await res.json()
-      setGroceryList(data.list)
+      setGroceryAdded(data.added ?? 0)
     }
     setGroceryLoading(false)
     router.refresh()
@@ -228,35 +225,27 @@ export function WeekPlan({ initialRecipes, initialGroceryList, overlaps, fridgeI
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-1">Grocery list</p>
-            {fridgeIngredients.length > 0 && (
-              <p className="text-xs text-ink-ghost">Cross-referenced against your fridge — items you have are flagged.</p>
-            )}
+            <p className="text-xs text-ink-ghost">Add every ingredient from this week&rsquo;s recipes to your grocery list.</p>
           </div>
           <button
-            onClick={generateGroceryList}
+            onClick={addToGroceryList}
             disabled={groceryLoading}
             className="inline-flex items-center gap-2 text-xs font-medium bg-ember text-white px-4 py-2 rounded-full hover:bg-ember/90 disabled:opacity-60 transition-colors"
           >
-            {groceryLoading ? 'Generating…' : groceryList ? 'Regenerate' : 'Generate list'}
+            {groceryLoading ? 'Adding…' : 'Add to grocery list'}
           </button>
         </div>
 
-        {groceryList && (
-          <div className="bg-panel border border-line rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-ink">Your shopping list</p>
-              <button
-                onClick={async () => {
-                  await navigator.clipboard.writeText(groceryList)
-                  setGroceryCopied(true)
-                  setTimeout(() => setGroceryCopied(false), 2000)
-                }}
-                className="text-xs text-ink-ghost hover:text-ember transition-colors px-3 py-1 rounded-full border border-line hover:border-ember"
-              >
-                {groceryCopied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-            <pre className="text-sm text-ink-dim whitespace-pre-wrap font-sans leading-relaxed">{groceryList}</pre>
+        {groceryAdded !== null && (
+          <div className="bg-panel border border-line rounded-xl p-5 flex items-center justify-between gap-4">
+            <p className="text-sm text-ink-dim">
+              {groceryAdded > 0
+                ? `Added ${groceryAdded} ingredient${groceryAdded === 1 ? '' : 's'} to your grocery list.`
+                : 'Everything from this week is already on your grocery list.'}
+            </p>
+            <Link href="/fridge" className="text-xs font-medium text-ember hover:underline whitespace-nowrap">
+              View list →
+            </Link>
           </div>
         )}
       </div>

@@ -113,7 +113,7 @@ export function SubmitForm() {
             <div className="text-4xl">✓</div>
             <h2 className="font-display text-2xl font-bold text-ink">Recipe submitted</h2>
             <p className="text-ink-dim max-w-md mx-auto">
-              Your recipe is in the queue. We'll review it and let you know when it goes live.
+              Your recipe is in the queue. We&rsquo;ll review it and let you know when it goes live.
             </p>
             <button
               onClick={() => router.push('/')}
@@ -395,7 +395,7 @@ export function SubmitForm() {
                 {status === 'submitting' ? 'Submitting...' : 'Submit to Cookbookverse'}
               </button>
               <p className="text-xs text-ink-ghost mt-3">
-                Your recipe will be reviewed before it's published.
+                Your recipe will be reviewed before it&rsquo;s published.
               </p>
             </div>
 

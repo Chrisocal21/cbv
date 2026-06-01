@@ -24,7 +24,7 @@ export function CookHeatmap({ data }: Props) {
   endDate.setDate(today.getDate() + (6 - todayDay))
 
   const weeks: { date: Date; dateStr: string; count: number }[][] = []
-  let cursor = new Date(endDate)
+  const cursor = new Date(endDate)
   cursor.setDate(cursor.getDate() - 52 * 7 + 1)
   // align cursor to Sunday
   cursor.setDate(cursor.getDate() - cursor.getDay())

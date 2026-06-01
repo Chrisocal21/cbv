@@ -106,14 +106,14 @@ function renderMessageContent(content: string, recipeMap: Record<string, RecipeP
   })
 }
 
-export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePreview> }) {
+export function AIChat({ recipeMap = {}, className = '' }: { recipeMap?: Record<string, RecipePreview>; className?: string }) {
   const { isSignedIn } = useUser()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [actions, setActions] = useState<Record<number, ActionState>>({})
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([])
-  const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([])
+  const [groceryItems, setGroceryItems] = useState<string[]>([])
   const [weekPlan, setWeekPlan] = useState<string[]>([]) // recipe IDs in current week plan
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -127,9 +127,12 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.dietaryPreferences?.length) setDietaryPreferences(data.dietaryPreferences) })
       .catch(() => {})
-    fetch('/api/user/fridge')
+    fetch('/api/user/grocery')
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.fridgeIngredients?.length) setFridgeIngredients(data.fridgeIngredients) })
+      .then((data) => {
+        const texts = (data?.items as { text: string }[] | undefined)?.map((i) => i.text).filter(Boolean)
+        if (texts?.length) setGroceryItems(texts)
+      })
       .catch(() => {})
     fetch('/api/user/week-plan')
       .then((r) => r.ok ? r.json() : null)
@@ -153,7 +156,7 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, dietaryPreferences, fridgeIngredients, weekPlanIds: weekPlan }),
+        body: JSON.stringify({ messages: next, dietaryPreferences, ingredients: groceryItems, weekPlanIds: weekPlan }),
       })
 
       if (!res.ok || !res.body) throw new Error('Request failed')
@@ -235,18 +238,21 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
   }
 
   return (
-    <div className="border border-line rounded-2xl bg-panel overflow-hidden">
+    <div className={`flex flex-col ${className}`}>
       {/* Messages */}
-      <div className="min-h-[320px] max-h-[520px] overflow-y-auto scrollbar-thin p-6 space-y-5">
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-4 md:px-6 py-4 space-y-5 min-h-0">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-ink-ghost text-sm">Start by asking anything.</p>
-            <div className="mt-4 flex flex-wrap gap-2 justify-center">
+          <div className="h-full flex flex-col items-center justify-center py-2 md:py-8 text-center">
+            <p className="text-ink text-sm md:text-base font-medium mb-0.5 md:mb-1">Ask for anything</p>
+            <p className="text-ink-ghost text-[11px] md:text-sm mb-2 md:mb-3 max-w-sm px-4">
+              Describe what you have or what you're craving.
+            </p>
+            <div className="flex flex-wrap gap-1.5 md:gap-2 justify-center max-w-md px-4">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => setInput(s)}
-                  className="text-xs px-3 py-2 rounded-full border border-line bg-page text-ink-dim hover:border-ember hover:text-ink transition-colors"
+                  className="text-[11px] md:text-sm px-2.5 py-1 md:px-4 md:py-2 rounded-full border border-line bg-page text-ink hover:border-ember hover:bg-ember/5 transition-colors"
                 >
                   {s}
                 </button>
@@ -259,7 +265,7 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
               msg.role === 'user' ? 'items-end' : 'items-start'
             }`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                   msg.role === 'user'
                     ? 'bg-ember text-white rounded-br-sm whitespace-pre-wrap'
                     : 'bg-page border border-line text-ink rounded-bl-sm'
@@ -280,7 +286,7 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
         )}
         {loading && messages[messages.length - 1]?.content === '' && (
           <div className="flex justify-start">
-            <div className="bg-page border border-line rounded-2xl rounded-bl-sm px-4 py-3">
+            <div className="bg-page border border-line rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               <ThinkingDots />
             </div>
           </div>
@@ -289,27 +295,29 @@ export function AIChat({ recipeMap = {} }: { recipeMap?: Record<string, RecipePr
       </div>
 
       {/* Input */}
-      <div className="border-t border-line p-4 space-y-2">
-        {fridgeIngredients.length > 0 && (
-          <div className="flex items-center gap-2 text-xs text-ink-ghost">
-            <span>🧊</span>
-            <span>Fridge loaded: {fridgeIngredients.slice(0, 5).join(', ')}{fridgeIngredients.length > 5 ? ` +${fridgeIngredients.length - 5} more` : ''}</span>
-            <a href="/fridge" className="text-ember hover:underline ml-auto">Edit fridge →</a>
+      <div className="border-t border-line bg-page p-3 md:p-4 space-y-2 md:space-y-3 flex-shrink-0">
+        {groceryItems.length > 0 && (
+          <div className="flex items-start gap-2 px-2.5 py-1.5 md:px-3 md:py-2 rounded-lg border border-ember/20 bg-ember/5 text-xs">
+            <div className="flex-1 min-w-0">
+              <p className="text-ink-ghost mb-1">From your grocery list:</p>
+              <p className="text-ink leading-relaxed">{groceryItems.slice(0, 5).join(', ')}{groceryItems.length > 5 ? `, +${groceryItems.length - 5} more` : ''}</p>
+            </div>
+            <a href="/fridge" className="text-ember hover:text-ember-deep whitespace-nowrap font-medium">Edit →</a>
           </div>
         )}
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-2 md:gap-3 items-end">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder={fridgeIngredients.length > 0 ? 'What can I make with what I have?' : 'I have chicken thighs, soy sauce, and ginger...'}
+            placeholder={groceryItems.length > 0 ? 'What can I make with these?' : 'I have chicken, soy sauce, and ginger...'}
             rows={2}
-            className="flex-1 resize-none bg-page border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
+            className="flex-1 resize-none bg-panel border border-line rounded-xl px-3 py-2 md:px-4 md:py-3 text-sm text-ink placeholder:text-ink-ghost focus:outline-none focus:border-ember transition-colors"
           />
           <button
             onClick={send}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-10 h-10 rounded-full bg-ember text-white flex items-center justify-center hover:bg-ember-deep disabled:opacity-40 transition-colors"
+            className="flex-shrink-0 w-11 h-11 rounded-full bg-ember text-white flex items-center justify-center hover:bg-ember-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             aria-label="Send"
           >
             <SendIcon />
@@ -367,7 +375,7 @@ function RecipeActions({
 
   if (state.status === 'submitted') {
     return (
-      <p className="mt-2 text-xs text-green-400">✓ Submitted for review. We'll let you know when it's approved.</p>
+      <p className="mt-2 text-xs text-green-400">✓ Submitted for review. We&rsquo;ll let you know when it&rsquo;s approved.</p>
     )
   }
 
@@ -414,8 +422,10 @@ function SubmitIcon() {
 }
 
 const SUGGESTIONS = [
-  'I have chicken, lemon, and capers',
-  'Something cozy for a cold night',
-  'Make this vegan',
+  'I have chicken, garlic, and tomatoes',
+  'Something warming for tonight',
   'Quick dinner under 30 minutes',
+  'Make it vegan',
+  "What's good with pasta?",
+  'Breakfast ideas with eggs',
 ]

@@ -18,6 +18,8 @@ export const collections = pgTable('collections', {
 type Ingredient = { group: string; items: string[] }
 type Step = { title: string; body: string }
 type Nutrition = { calories: number; protein: string; carbs: string; fat: string; fiber: string }
+type GroceryItem = { id: string; text: string; checked: boolean }
+type GroceryList = { id: string; name: string; items: GroceryItem[] }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
@@ -81,9 +83,9 @@ export const users = pgTable('users', {
   role: text('role').notNull().default('user'), // 'user' | 'admin'
   savedRecipes: jsonb('saved_recipes').$type<string[]>().notNull().default([]),
   dietaryPreferences: jsonb('dietary_preferences').$type<string[]>().notNull().default([]),
-  fridgeIngredients: jsonb('fridge_ingredients').$type<string[]>().notNull().default([]),
   weekPlan: jsonb('week_plan').$type<string[]>().notNull().default([]),
-  groceryList: text('grocery_list').notNull().default(''),
+  groceryItems: jsonb('grocery_items').$type<GroceryItem[]>().notNull().default([]),
+  groceryLists: jsonb('grocery_lists').$type<GroceryList[]>().notNull().default([]),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 

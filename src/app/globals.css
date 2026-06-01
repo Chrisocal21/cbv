@@ -5,38 +5,39 @@
 
 /* ─── Design tokens (light-mode defaults) ─────────────────────── */
 @theme {
-  /* Typography */
-  --font-display: var(--font-playfair);
+  /* Typography — one friendly sans for everything */
+  --font-display: var(--font-dm-sans);
   --font-sans:    var(--font-dm-sans);
 
-  /* Page & surface backgrounds */
-  --color-page:         #C8B49C;
-  --color-panel:        #D4C2AE;
-  --color-panel-raised: #DCCFBE;
+  /* Page & surface backgrounds — soft cool slate, never pure white */
+  --color-page:         #E7EBF0;
+  --color-panel:        #EFF2F6;
+  --color-panel-raised: #F6F8FB;
 
   /* Borders */
-  --color-line: #B5A08E;
+  --color-line: #CED6DF;
 
   /* Text */
-  --color-ink:       #1C1410;
-  --color-ink-dim:   #6B5B52;
-  --color-ink-ghost: #9B8880;
+  --color-ink:       #1D2731;
+  --color-ink-dim:   #54606E;
+  --color-ink-ghost: #8893A1;
 
-  /* Accent — terracotta */
-  --color-ember:      #C2603A;
-  --color-ember-deep: #A8502F;
+  /* Accent — muted blue */
+  --color-ember:      #3D72A8;
+  --color-ember-deep: #2F5A88;
 }
 
-/* ─── Dark mode overrides ──────────────────────────────────────── */
+/* ─── Dark mode overrides (warm-soft slate, non-blinding) ──────── */
 .dark {
-  --color-page:         #1A1410;
-  --color-panel:        #231C18;
-  --color-panel-raised: #2E2420;
-  --color-line:         #3D3028;
-  --color-ink:          #F5EDE6;
-  --color-ink-dim:      #C4AFA7;
-  --color-ink-ghost:    #8A7570;
-  --color-ember-deep:   #D4714A;
+  --color-page:         #181C22;
+  --color-panel:        #20262E;
+  --color-panel-raised: #2A313A;
+  --color-line:         #38414C;
+  --color-ink:          #E6EAEF;
+  --color-ink-dim:      #A4AEBB;
+  --color-ink-ghost:    #6B7480;
+  --color-ember:        #5E97CC;
+  --color-ember-deep:   #4F86BC;
 }
 
 /* ─── Base ─────────────────────────────────────────────────────── */
@@ -90,7 +91,7 @@ body {
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-ember-dim, #8b4a2f55) transparent;
+  scrollbar-color: rgba(61, 114, 168, 0.4) transparent;
 }
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
@@ -99,9 +100,21 @@ body {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgba(180, 90, 50, 0.25);
+  background-color: rgba(61, 114, 168, 0.30);
   border-radius: 99px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(180, 90, 50, 0.5);
+  background-color: rgba(61, 114, 168, 0.55);
+}
+
+/* iOS safe area padding for bottom nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile bottom nav spacing — add to page containers on mobile */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
 }

@@ -1,14 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, DM_Sans } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -16,11 +10,12 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-// Runs before React hydrates — prevents flash of wrong theme
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(t===null&&d)){document.documentElement.classList.add('dark')}}catch(e){}})()`;
+// Runs before React hydrates — prevents flash of wrong theme.
+// Defaults to dark unless the user has explicitly chosen light.
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t!=='light'){document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})()`;
 
 export const viewport: Viewport = {
-  themeColor: "#C2603A",
+  themeColor: "#181C22",
 };
 
 export const metadata: Metadata = {
@@ -41,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${dmSans.variable}`}
+      className={`${dmSans.variable}`}
       suppressHydrationWarning
     >
       <head>

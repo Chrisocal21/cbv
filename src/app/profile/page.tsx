@@ -4,7 +4,6 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { UserCollections } from '@/components/user-collections'
-import { AIChat } from '@/components/ai-chat'
 import { db } from '@/lib/db'
 import { userCollections, cookedLog } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -23,8 +22,14 @@ import {
 import { recipes as recipesTable } from '@/lib/db/schema'
 import { inArray } from 'drizzle-orm'
 import { computeOverlaps, type IngredientGroup } from '@/lib/ingredients'
+import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Profile — Cookbookverse',
+  description: 'Your recipes, collections, and cooking history.',
+}
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -196,7 +201,6 @@ export default async function ProfilePage({
       })
       .map((e) => e.recipeId)
   )
-  const weekPlanCookedCount = weekPlanIds.filter((id) => cookedThisWeekIds.has(id)).length
 
   // Split authored recipes by status
   const published = myRecipes.filter((r) => r.status === 'published')
@@ -206,11 +210,9 @@ export default async function ProfilePage({
 
   const displayName = profile?.displayName ?? clerkUser?.firstName ?? 'Chef'
   const avatarUrl   = profile?.avatarUrl ?? clerkUser?.imageUrl
-  const fridgeIngredients = profile?.fridgeIngredients ?? []
 
   const tabs = [
     { id: 'home',        label: 'Home' },
-    { id: 'ai',          label: 'AI Kitchen' },
     { id: 'this-week',   label: 'This week',   count: weekPlanIds.length },
     { id: 'recipes',     label: 'Recipes',     count: myRecipes.length },
     { id: 'saved',       label: 'Saved',       count: savedRecipes.length },
@@ -235,7 +237,6 @@ export default async function ProfilePage({
           )}
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-xl font-bold text-ink leading-none">{displayName}</h1>
-            <p className="text-xs text-ink-ghost mt-1">My Kitchen</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {profile?.username && (
@@ -288,19 +289,26 @@ export default async function ProfilePage({
         {activeTab === 'home' && (
           <div className="space-y-10">
 
-            {/* Stats row */}
-            <div className="grid grid-cols-4 gap-3">
-              {[
-                { label: 'Published', value: published.length },
-                { label: 'Saved',     value: savedRecipes.length },
-                { label: 'Cooked',    value: cookedEntries.length },
-                { label: cookStreak > 0 ? `${cookStreak === 1 ? '1 day' : `${cookStreak} days`}` : 'No streak', value: cookStreak > 0 ? '🔥' : '—', sub: 'streak' },
-              ].map((stat) => (
-                <div key={stat.label} className="bg-panel border border-line rounded-xl px-4 py-4 text-center">
-                  <p className={`font-display text-2xl sm:text-3xl font-bold ${stat.sub === 'streak' && cookStreak > 0 ? 'text-ember' : 'text-ink'}`}>{stat.value}</p>
-                  <p className="text-xs text-ink-ghost mt-1">{stat.label}</p>
-                </div>
-              ))}
+            {/* At-a-glance — a quiet byline, not a wall of cards */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm border-b border-line pb-6">
+              <span className="inline-flex items-baseline gap-1.5 text-ink-dim">
+                <span className="font-display font-bold text-ink tabular-nums">{published.length}</span>
+                published
+              </span>
+              <span className="inline-flex items-baseline gap-1.5 text-ink-dim">
+                <span className="font-display font-bold text-ink tabular-nums">{savedRecipes.length}</span>
+                saved
+              </span>
+              <span className="inline-flex items-baseline gap-1.5 text-ink-dim">
+                <span className="font-display font-bold text-ink tabular-nums">{cookedEntries.length}</span>
+                cooked
+              </span>
+              {cookStreak > 0 && (
+                <span className="inline-flex items-baseline gap-1.5 text-ember font-medium">
+                  <span aria-hidden>🔥</span>
+                  {cookStreak === 1 ? '1-day streak' : `${cookStreak}-day streak`}
+                </span>
+              )}
             </div>
 
             {/* Milestone callout for notable streaks */}
@@ -399,40 +407,6 @@ export default async function ProfilePage({
               </div>
             )}
 
-            {/* Quick actions */}
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-ghost mb-4">Quick actions</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Link href="/profile?tab=ai" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
-                  <svg className="w-6 h-6 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">AI Kitchen</span>
-                  <span className="text-xs text-ink-ghost">Generate a recipe</span>
-                </Link>
-                <Link href="/submit" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
-                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Submit</span>
-                  <span className="text-xs text-ink-ghost">Add your own recipe</span>
-                </Link>
-                <Link href="/fridge" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
-                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h12a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18v-2.25z" /></svg>
-                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">My fridge</span>
-                  <span className="text-xs text-ink-ghost">{fridgeIngredients.length > 0 ? `${fridgeIngredients.length} items` : 'What\'s in there?'}</span>
-                </Link>
-                <Link href="/explore" className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
-                  <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" /></svg>
-                  <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Explore</span>
-                  <span className="text-xs text-ink-ghost">Find new recipes</span>
-                </Link>
-                {savedRecipes.length > 0 && (
-                  <Link href={`/grocery-list?recipes=${savedRecipes.slice(0, 20).map((r) => r.slug).join(',')}`} className="group flex flex-col items-center gap-2 bg-panel border border-line hover:border-ember rounded-xl px-4 py-5 text-center transition-colors">
-                    <svg className="w-6 h-6 text-ink-ghost group-hover:text-ember transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" /></svg>
-                    <span className="text-sm font-semibold text-ink group-hover:text-ember transition-colors">Grocery list</span>
-                    <span className="text-xs text-ink-ghost">From {savedRecipes.length} saved</span>
-                  </Link>
-                )}
-              </div>
-            </div>
-
             {/* Recent recipes */}
             {myRecipes.length > 0 && (
               <div>
@@ -481,27 +455,12 @@ export default async function ProfilePage({
                 </div>
                 <p className="font-display text-xl text-ink mb-2">Welcome to your kitchen</p>
                 <p className="text-sm text-ink-ghost mb-6">Start by asking the AI to generate a recipe, or submit one you already love.</p>
-                <Link href="/profile?tab=ai" className="inline-flex items-center gap-2 bg-ember text-white px-6 py-3 rounded-full font-semibold text-sm hover:bg-ember/90 transition-colors">
+                <Link href="/ai" className="inline-flex items-center gap-2 bg-ember text-white px-6 py-3 rounded-full font-semibold text-sm hover:bg-ember/90 transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                  Open AI Kitchen
+                  Ask AI
                 </Link>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── AI Kitchen ── */}
-        {activeTab === 'ai' && (
-          <div>
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-ember" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" /></svg>
-                <p className="text-xs font-semibold tracking-[0.2em] uppercase text-ember">AI Kitchen</p>
-              </div>
-              <h2 className="font-display text-2xl font-bold text-ink">What do you want to cook?</h2>
-              <p className="text-sm text-ink-dim mt-1">Tell it what&apos;s in your fridge. Describe a craving. Ask it to adapt something.</p>
-            </div>
-            <AIChat />
           </div>
         )}
 
@@ -573,7 +532,7 @@ export default async function ProfilePage({
                 <div className="flex items-center justify-between mb-5">
                   <p className="text-sm text-ink-ghost">{savedRecipes.length} {savedRecipes.length === 1 ? 'recipe' : 'recipes'}</p>
                   <a
-                    href={`/grocery-list?recipes=${savedRecipes.slice(0, 20).map((r) => r.slug).join(',')}`}
+                    href="/grocery-list"
                     className="inline-flex items-center gap-2 text-xs font-medium border border-line hover:border-ember text-ink-dim hover:text-ink px-4 py-2 rounded-full transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
@@ -662,9 +621,7 @@ export default async function ProfilePage({
         {activeTab === 'this-week' && (
           <WeekPlan
             initialRecipes={weekPlanRecipes.map((r) => ({ id: r.id, slug: r.slug, title: r.title, subtitle: r.subtitle, cuisine: r.cuisine, totalTime: r.totalTime, difficulty: r.difficulty, gradient: r.gradient, imageUrl: r.imageUrl }))}
-            initialGroceryList={profile?.groceryList ?? ''}
             overlaps={weekPlanOverlaps}
-            fridgeIngredients={fridgeIngredients}
             cookedThisWeekIds={[...cookedThisWeekIds]}
           />
         )}

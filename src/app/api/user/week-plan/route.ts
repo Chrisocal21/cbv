@@ -12,16 +12,15 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const row = await db
-    .select({ weekPlan: users.weekPlan, groceryList: users.groceryList })
+    .select({ weekPlan: users.weekPlan })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1)
 
   const weekPlanIds: string[] = row[0]?.weekPlan ?? []
-  const groceryList: string = row[0]?.groceryList ?? ''
 
   if (weekPlanIds.length === 0) {
-    return NextResponse.json({ recipeIds: [], recipes: [], overlaps: {}, groceryList })
+    return NextResponse.json({ recipeIds: [], recipes: [], overlaps: {} })
   }
 
   // Fetch plan recipes + all published recipes (for staple computation)
@@ -37,7 +36,7 @@ export async function GET() {
   }))
   const overlaps = computeOverlaps(planForOverlap, allIngredients)
 
-  return NextResponse.json({ recipeIds: weekPlanIds, recipes: planRecipes, overlaps, groceryList })
+  return NextResponse.json({ recipeIds: weekPlanIds, recipes: planRecipes, overlaps })
 }
 
 // ─── POST /api/user/week-plan — add or remove a recipe from the plan ─────────
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
   await db.insert(users).values({ id: userId }).onConflictDoNothing()
 
   if (action === 'clear') {
-    await db.update(users).set({ weekPlan: [], groceryList: '' }).where(eq(users.id, userId))
+    await db.update(users).set({ weekPlan: [] }).where(eq(users.id, userId))
     return NextResponse.json({ ok: true, weekPlan: [], inPlan: false })
   }
 
