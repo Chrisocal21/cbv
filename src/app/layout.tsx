@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceWarningBanner } from "@/components/service-warning-banner";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -44,7 +45,10 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <ClerkProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <ServiceWarningBanner />
+            {children}
+          </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>
